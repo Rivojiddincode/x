@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Gamepad2, ShoppingBag, Trophy, Gift, ShieldAlert, MessageSquare, Wallet, ChevronDown } from 'lucide-react';
+import { Gamepad2, ShoppingBag, Trophy, Gift, ShieldAlert, MessageSquare, Wallet, ChevronDown, User } from 'lucide-react';
 import { SpartanLogo } from './SpartanLogo';
 import { CrossedCSGuns } from './CrossedCSGuns';
 
@@ -40,6 +40,9 @@ export default function Navbar({ activeTab, setActiveTab, totalOnline, onOpenPay
           <button className={`nav-btn ${activeTab === 'skins' ? 'active' : ''}`} onClick={() => setActiveTab('skins')}>
             <CrossedCSGuns size={16} /> Skinlar
           </button>
+          <button className={`nav-btn ${activeTab === 'profile' ? 'active' : ''}`} onClick={() => setActiveTab('profile')}>
+            <User size={15} /> Profil
+          </button>
 
           {/* More Dropdown Menu */}
           <div className="nav-dropdown-wrapper" onMouseEnter={() => setShowMoreMenu(true)} onMouseLeave={() => setShowMoreMenu(false)}>
@@ -64,12 +67,19 @@ export default function Navbar({ activeTab, setActiveTab, totalOnline, onOpenPay
           <button className="btn btn-wallet" onClick={onOpenPayme}>
             <Wallet size={15} /> To'ldirish
           </button>
-          <button className="btn btn-steam" onClick={onOpenSteam}>
-            <svg className="steam-official-icon" viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-              <path d="M11.979 0C5.678 0 .511 4.86.022 11.037l6.432 2.658c.545-.371 1.203-.59 1.912-.59.063 0 .125.004.188.006l2.861-4.142V8.91c0-2.495 2.028-4.524 4.524-4.524 2.494 0 4.524 2.03 4.524 4.524s-2.03 4.524-4.524 4.524c-.102 0-.201-.009-.302-.014l-4.086 2.923c.005.085.014.17.014.256 0 1.841-1.493 3.334-3.334 3.334-1.507 0-2.775-1.002-3.189-2.385L.43 15.659C1.706 20.5 6.13 24 11.979 24c6.627 0 12-5.373 12-12s-5.373-12-12-12z"/>
-            </svg>
-            <span className="btn-steam-text">{user ? user.displayName : 'Steam Kirish'}</span>
-          </button>
+          {user ? (
+            <button className="btn btn-steam" style={{ borderColor: 'var(--purple)', background: 'rgba(139, 92, 246, 0.15)' }} onClick={() => setActiveTab('profile')}>
+              <img src={user.avatarUrl} alt={user.displayName} style={{ width: '20px', height: '20px', borderRadius: '50%' }} />
+              <span className="btn-steam-text">{user.displayName}</span>
+            </button>
+          ) : (
+            <button className="btn btn-steam" onClick={onOpenSteam}>
+              <svg className="steam-official-icon" viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                <path d="M11.979 0C5.678 0 .511 4.86.022 11.037l6.432 2.658c.545-.371 1.203-.59 1.912-.59.063 0 .125.004.188.006l2.861-4.142V8.91c0-2.495 2.028-4.524 4.524-4.524 2.494 0 4.524 2.03 4.524 4.524s-2.03 4.524-4.524 4.524c-.102 0-.201-.009-.302-.014l-4.086 2.923c.005.085.014.17.014.256 0 1.841-1.493 3.334-3.334 3.334-1.507 0-2.775-1.002-3.189-2.385L.43 15.659C1.706 20.5 6.13 24 11.979 24c6.627 0 12-5.373 12-12s-5.373-12-12-12z"/>
+              </svg>
+              <span className="btn-steam-text">Steam Kirish</span>
+            </button>
+          )}
         </div>
       </div>
     </header>

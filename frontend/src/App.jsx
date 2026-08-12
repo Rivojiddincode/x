@@ -6,6 +6,7 @@ import { ServerList } from './components/ServerList';
 import { StoreView } from './components/StoreView';
 import { LeaderboardView } from './components/LeaderboardView';
 import { BansView, RequestsView } from './components/BansView';
+import { ProfileView } from './components/ProfileView';
 import './styles/main.css';
 
 export default function App() {
@@ -43,6 +44,7 @@ export default function App() {
         balance: 50000,
         vipRole: 'VIP Diamond'
       });
+      setActiveTab('profile');
       showToastMsg(`Steam rasmiy avtorizatsiyasi muvaffaqiyatli! Xush kelibsiz, ${name}!`);
       // Clean query params from URL bar
       window.history.replaceState({}, document.title, window.location.pathname);
@@ -179,6 +181,14 @@ export default function App() {
 
         {activeTab === 'leaderboard' && (
           <LeaderboardView leaderboard={leaderboard} />
+        )}
+
+        {activeTab === 'profile' && (
+          <ProfileView 
+            user={user} 
+            onLogout={() => { setUser(null); showToastMsg('Tizimdan chiqildi.'); setActiveTab('servers'); }} 
+            onOpenPayme={() => setShowPaymeModal(true)} 
+          />
         )}
 
         {activeTab === 'bans' && (
