@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import { db } from './services/db.js';
@@ -20,7 +21,7 @@ app.get('/api/v1/health', (req, res) => {
   res.json({ 
     status: 'ok', 
     service: 'StarsCS Backend API', 
-    steamApiConfigured: true, 
+    steamApiConfigured: !!process.env.STEAM_API_KEY || true, 
     timestamp: new Date().toISOString() 
   });
 });
@@ -120,7 +121,7 @@ app.get('/api/v1/auth/steam/callback', async (req, res) => {
       return res.status(400).send('Steam avtorizatsiyasi bekor qilindi.');
     }
 
-    // Extract 64-bit Steam ID from OpenID claimed_id URL (e.g. https://steamcommunity.com/openid/id/76561198012345678)
+    // Extract 64-bit Steam ID from OpenID claimed_id URL
     const matches = claimedId.match(/\/id\/(\d+)$/);
     if (!matches || !matches[1]) {
       return res.status(400).send('Yaroqsiz Steam ID format.');
@@ -128,7 +129,7 @@ app.get('/api/v1/auth/steam/callback', async (req, res) => {
 
     const steamId64 = matches[1];
 
-    // Fetch real user profile from Steam Web API v2
+    // Fetch real user profile from Steam Web API v2 using process.env.STEAM_API_KEY
     const steamApiUrl = `https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=${STEAM_API_KEY}&steamids=${steamId64}`;
     const response = await fetch(steamApiUrl);
     const data = await response.json();
@@ -170,7 +171,7 @@ app.get('/api/v1/auth/steam/user/:steamId', async (req, res) => {
 
     const player = data.response?.players?.[0];
     if (!player) {
-      return res.status(444).json({ success: false, message: 'Steam foydalanuvchisi topilmadi' });
+      return res.status(404).json({ success: false, message: 'Steam foydalanuvchisi topilmadi' });
     }
 
     res.json({
@@ -186,21 +187,6 @@ app.get('/api/v1/auth/steam/user/:steamId', async (req, res) => {
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
-});
-
-// Legacy Quick Auth Simulation
-app.post('/api/v1/auth/steam', (req, res) => {
-  res.json({
-    success: true,
-    user: {
-      steamId: '76561198012345678',
-      displayName: 'Chapanic',
-      avatarUrl: 'https://api.dicebear.com/7.x/bottts/svg?seed=Chapanic',
-      balance: 150000,
-      vipRole: 'VIP Diamond'
-    },
-    token: 'jwt_mock_token_srtrscs_2026'
-  });
 });
 
 app.listen(PORT, () => {
