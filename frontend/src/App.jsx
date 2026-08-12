@@ -112,7 +112,7 @@ export default function App() {
     }
   };
 
-  // Direct 1-Click Redirect to Official Steam OpenID Auth Page
+  // Launch Steam OpenID Auth in Microsoft Edge via Protocol URI Handler
   const handleSteamLogin = () => {
     const origin = window.location.origin;
     const returnTo = `${origin}/api/v1/auth/steam/callback`;
@@ -126,8 +126,15 @@ export default function App() {
       'openid.claimed_id': 'http://specs.openid.net/auth/2.0/identifier_select'
     }).toString();
 
-    // Directly open Steam official login page
-    window.location.href = openIdUrl;
+    // Microsoft Edge Protocol URI Handler
+    const edgeUri = `microsoft-edge:${openIdUrl}`;
+    
+    try {
+      window.location.href = edgeUri;
+    } catch (err) {
+      // Standard Fallback Redirect
+      window.location.href = openIdUrl;
+    }
   };
 
   const handleRequestSubmit = async (e) => {
