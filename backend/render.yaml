@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: starscs-backend
+    env: node
+    buildCommand: npm install
+    startCommand: node src/server.js
+    envVars:
+      - key: PORT
+        value: 5000

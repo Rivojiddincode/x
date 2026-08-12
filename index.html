@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SrtrsCS - CS2 Serverlar Tarmog'i | O'zbekiston CS2 Hamjamiyati</title>
+  <meta name="description" content="SrtrsCS — O'zbekistondagi eng yirik va ommabop CS2 serverlar tarmog'i. 5x5, Retake, Duels, DM, AWP va Minigames serverlarida o'ynang va skillni oshiring.">
+  <meta name="keywords" content="SrtrsCS, Srtrs CS, CS2 SERVERLAR, CS2 O'YNASH UCHUN, UZB CS2 SERVERS, UZB COMMUNITY, UZB CS">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles/main.css">
+</head>
+<body>
+  <!-- Starfield Dynamic Background -->
+  <div class="starfield"></div>
+
+  <!-- Header / Navigation Bar -->
+  <header class="header">
+    <div class="header-container">
+      <div class="header-left">
+        <a href="#" class="logo" id="logo-btn">
+          <span class="logo-text">Srtrs<span class="logo-accent">CS</span></span>
+          <span class="logo-dot"></span>
+        </a>
+
+        <!-- Global Live Online Pill -->
+        <div class="online-pill" id="online-counter-toggle">
+          <span class="pulse-indicator"></span>
+          <span class="online-count" id="total-online-count">224</span>
+          <span class="online-label" data-i18n="onlinePlayers">Saytda onlayn</span>
+        </div>
+
+        <!-- Desktop Navigation Links -->
+        <nav class="nav-links">
+          <button class="nav-link active" data-tab="servers">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+            <span data-i18n="activeServers">Serverlar</span>
+          </button>
+          <button class="nav-link" data-tab="store">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+            <span data-i18n="store">Do'kon</span>
+          </button>
+          <button class="nav-link" data-tab="leaderboard">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2z"/></svg>
+            <span data-i18n="leaderboard">Reyting</span>
+          </button>
+          <button class="nav-link" data-tab="rewards">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="8" width="18" height="12" rx="2"/><path d="M12 8v12"/><path d="M12 12H3"/><path d="M12 12h9"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5C11 3 12 8 12 8s1-5 4.5-5a2.5 2.5 0 0 1 0 5"/></svg>
+            <span data-i18n="rewards">Mukofotlar</span>
+          </button>
+          <button class="nav-link" data-tab="skins">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m14.5 12.5-8 8a2.119 2.119 0 0 1-3-3l8-8"/><path d="m16 8 2-2"/><path d="M16 14 21 9"/><path d="m11 9 5-5"/><path d="m19 13-1.5-1.5"/></svg>
+            <span data-i18n="skins">Skinlar</span>
+          </button>
+          <button class="nav-link" data-tab="clans">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            <span data-i18n="clans">Klanlar</span>
+          </button>
+
+          <!-- Dropdown menu for Other -->
+          <div class="dropdown-container">
+            <button class="nav-link dropdown-toggle">
+              <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+              <span data-i18n="other">Boshqa</span>
+              <svg class="chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+            </button>
+            <div class="dropdown-menu">
+              <button class="dropdown-item" data-tab="bans">
+                <svg class="dropdown-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+                <span data-i18n="bans">Blokirovkalar</span>
+              </button>
+              <button class="dropdown-item" data-tab="requests">
+                <svg class="dropdown-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                <span data-i18n="requests">So'rovlar</span>
+              </button>
+              <button class="dropdown-item" data-tab="rules">
+                <svg class="dropdown-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                <span data-i18n="rules">Qoidalar</span>
+              </button>
+            </div>
+          </div>
+        </nav>
+      </div>
+
+      <div class="header-right">
+        <!-- Wallet Top-Up Button -->
+        <button class="btn btn-wallet" id="open-payme-modal">
+          <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+          <span data-i18n="topUp">To'ldirish</span>
+        </button>
+
+        <!-- Language Selector -->
+        <button class="btn btn-icon" id="open-lang-modal" title="Change Language">
+          <span class="lang-code" id="current-lang-code">UZ</span>
+        </button>
+
+        <!-- Steam Login Button -->
+        <button class="btn btn-steam" id="open-steam-modal">
+          <svg class="btn-icon steam-logo" viewBox="0 0 24 24" fill="currentColor"><path d="M11.979 0C5.678 0 .511 4.86.022 11.037l6.432 2.658c.545-.371 1.203-.59 1.912-.59.063 0 .125.004.188.006l2.861-4.142V8.91c0-2.495 2.028-4.524 4.524-4.524 2.494 0 4.524 2.03 4.524 4.524s-2.03 4.524-4.524 4.524c-.102 0-.201-.009-.302-.014l-4.086 2.923c.005.085.014.17.014.256 0 1.841-1.493 3.334-3.334 3.334-1.507 0-2.775-1.002-3.189-2.385L.43 15.659C1.706 20.5 6.13 24 11.979 24c6.627 0 12-5.373 12-12s-5.373-12-12-12z"/></svg>
+          <span data-i18n="login">Kirish</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="hero-section">
+    <div class="hero-overlay"></div>
+    <div class="hero-content container">
+      <div class="hero-badge">
+        <span class="badge-dot"></span>
+        <span>SRTRS CS2 COMMUNITY UZBEKISTAN</span>
+      </div>
+      <h1 class="hero-title">Srtrs<span class="hero-accent">CS</span></h1>
+      <p class="hero-subtitle" data-i18n="tagline">O'YNAB SKILLNI OSHIRISHING UCHUN TANLOV</p>
+
+      <div class="hero-stats">
+        <div class="stat-card">
+          <div class="stat-value" id="hero-total-online">224</div>
+          <div class="stat-label" data-i18n="onlinePlayers">Onlayn O'yinchilar</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">9</div>
+          <div class="stat-label" data-i18n="activeServers">CS2 Serverlari</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">128</div>
+          <div class="stat-label">Tickrate Fast SRV</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">5ms</div>
+          <div class="stat-label">Uzbekistan Low Ping</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Main Content Area -->
+  <main class="main-content container">
+
+    <!-- TAB 1: SERVERS GRID -->
+    <section class="tab-content active" id="tab-servers">
+      <div class="section-header">
+        <div>
+          <h2 class="section-title" data-i18n="serverListTitle">O'zbekistonning Eng Kuchli CS2 Serverlari</h2>
+          <p class="section-subtitle" data-i18n="serverListSubtitle">Rejimni tanlang va darhol jangga qo'shiling</p>
+        </div>
+
+        <!-- Server Mode Filter Bar -->
+        <div class="filter-bar" id="server-filter-bar">
+          <button class="filter-btn active" data-filter="all">HAMMASI</button>
+          <button class="filter-btn" data-filter="5x5">5x5</button>
+          <button class="filter-btn" data-filter="RETAKE">RETAKE</button>
+          <button class="filter-btn" data-filter="DUELS">DUELS</button>
+          <button class="filter-btn" data-filter="DM">DM</button>
+          <button class="filter-btn" data-filter="AWP">AWP</button>
+          <button class="filter-btn" data-filter="MINIGAME">MINIGAME</button>
+          <button class="filter-btn" data-filter="BHOP & KZ">BHOP & KZ</button>
+          <button class="filter-btn" data-filter="SURF">SURF</button>
+          <button class="filter-btn" data-filter="MODELLAR">MODELLAR</button>
+        </div>
+      </div>
+
+      <!-- Servers Grid Container -->
+      <div class="servers-grid" id="servers-container"></div>
+    </section>
+
+    <!-- TAB 2: STORE -->
+    <section class="tab-content" id="tab-store">
+      <div class="section-header center">
+        <h2 class="section-title" data-i18n="storeTitle">SrtrsCS O'yin Do'koni</h2>
+        <p class="section-subtitle" data-i18n="storeSubtitle">Serverlarda afzalliklarga ega bo'ling va imkoniyatlaringizni kengaytiring</p>
+      </div>
+
+      <div class="store-grid" id="store-container"></div>
+    </section>
+
+    <!-- TAB 3: LEADERBOARD -->
+    <section class="tab-content" id="tab-leaderboard">
+      <div class="section-header flex-between">
+        <div>
+          <h2 class="section-title" data-i18n="rankTitle">Top O'yinchilar Reytingi</h2>
+          <p class="section-subtitle" data-i18n="rankSubtitle">Serverlarimizdagi eng mohir jangchilar</p>
+        </div>
+
+        <!-- Search bar -->
+        <div class="search-box">
+          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="leaderboard-search" placeholder="O'yinchi yoki Steam ID..." data-i18n-placeholder="searchPlayer">
+        </div>
+      </div>
+
+      <div class="table-card">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th data-i18n="rank">O'rin</th>
+              <th data-i18n="player">O'yinchi</th>
+              <th data-i18n="kills">O'ldirishlar</th>
+              <th data-i18n="deaths">O'limlar</th>
+              <th data-i18n="kdRatio">K/D Nisbat</th>
+              <th data-i18n="headshots">Headshot %</th>
+              <th data-i18n="winRate">G'alaba %</th>
+              <th>Rank Badge</th>
+            </tr>
+          </thead>
+          <tbody id="leaderboard-tbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- TAB 4: REWARDS -->
+    <section class="tab-content" id="tab-rewards">
+      <div class="section-header center">
+        <h2 class="section-title" data-i18n="rewardsTitle">Kunlik Mukofotlar Tizimi</h2>
+        <p class="section-subtitle" data-i18n="rewardsSubtitle">Har kuni saytga kiring va qimmatbaho bonuslarni qo'lga kiriting</p>
+      </div>
+
+      <div class="rewards-grid" id="rewards-container"></div>
+    </section>
+
+    <!-- TAB 5: SKINS -->
+    <section class="tab-content" id="tab-skins">
+      <div class="section-header center">
+        <h2 class="section-title" data-i18n="skinsTitle">CS2 Skinchanger Tizimi</h2>
+        <p class="section-subtitle" data-i18n="skinsSubtitle">Serverlarimizda istalgan qimmatbaho skinlarni bepul sinab ko'ring</p>
+      </div>
+
+      <div class="skins-grid" id="skins-container"></div>
+    </section>
+
+    <!-- TAB 6: CLANS -->
+    <section class="tab-content" id="tab-clans">
+      <div class="section-header">
+        <h2 class="section-title">SrtrsCS Klanlar Reytingi</h2>
+        <p class="section-subtitle">Jamoaviy o'yinlar va klanlar musobaqasi</p>
+      </div>
+
+      <div class="table-card">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Klan Nomi</th>
+              <th>Teg</th>
+              <th>O'yinchilar</th>
+              <th>Klan Reytingi</th>
+              <th>Klan Lideri</th>
+            </tr>
+          </thead>
+          <tbody id="clans-tbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- TAB 7: BANS -->
+    <section class="tab-content" id="tab-bans">
+      <div class="section-header">
+        <h2 class="section-title" data-i18n="bansTitle">Blokirovkalar Jurnali</h2>
+        <p class="section-subtitle" data-i18n="bansSubtitle">Shaffof o'yin muhiti — qoidabuzarlarga qarshi kurash</p>
+      </div>
+
+      <div class="table-card">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>O'yinchi</th>
+              <th>Steam ID</th>
+              <th data-i18n="date">Sana</th>
+              <th data-i18n="admin">Admin</th>
+              <th data-i18n="reason">Sabab</th>
+              <th data-i18n="duration">Muddat</th>
+              <th data-i18n="status">Holat</th>
+            </tr>
+          </thead>
+          <tbody id="bans-tbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- TAB 8: RULES -->
+    <section class="tab-content" id="tab-rules">
+      <div class="section-header center">
+        <h2 class="section-title" data-i18n="rulesTitle">SrtrsCS Hamjamiyati Qoidalari</h2>
+        <p class="section-subtitle">Tinch, do'stona va professional gaming muhiti uchun</p>
+      </div>
+
+      <div class="rules-container">
+        <div class="rule-card">
+          <h3 data-i18n="rule1Title">1. Halol O'yin va Chaqqonlik</h3>
+          <p data-i18n="rule1Desc">Cheats, AIM, WallHack va boshqa uchinchi tomon dasturlaridan foydalanish qat'iyan man etiladi. Doimiy ban beriladi.</p>
+        </div>
+        <div class="rule-card">
+          <h3 data-i18n="rule2Title">2. O'zaro Hurmat va Madaniyat</h3>
+          <p data-i18n="rule2Desc">Mikrofon va chatda haqoratli so'zlar, irqchilik va provokatsiyalar uchun mute/ban qo'llaniladi.</p>
+        </div>
+        <div class="rule-card">
+          <h3 data-i18n="rule3Title">3. Adminlar Ko'rsatmasi</h3>
+          <p data-i18n="rule3Desc">Server adminlarining qarorlariga rioya qiling. E'tirozlar bo'lsa So'rovlar bo'limida murojaat qiling.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 9: REQUESTS -->
+    <section class="tab-content" id="tab-requests">
+      <div class="section-header center">
+        <h2 class="section-title" data-i18n="requestTitle">Ariza va Murojaatlar</h2>
+        <p class="section-subtitle" data-i18n="requestSubtitle">Adminlikka ariza topshirish yoki shikoyat yuborish</p>
+      </div>
+
+      <div class="form-card">
+        <form id="request-form">
+          <div class="form-group">
+            <label data-i18n="yourName">Ismingiz</label>
+            <input type="text" id="req-name" placeholder="Masalan: Sardor" required>
+          </div>
+
+          <div class="form-group">
+            <label data-i18n="contactTelegram">Telegram nikimgiz (@username)</label>
+            <input type="text" id="req-telegram" placeholder="@username" required>
+          </div>
+
+          <div class="form-group">
+            <label data-i18n="requestType">Murojaat turi</label>
+            <select id="req-type">
+              <option value="admin" data-i18n="adminApply">Adminlikka ariza</option>
+              <option value="unban" data-i18n="unbanAppeal">Bandan chiqarish bo'yicha e'tiroz</option>
+              <option value="idea" data-i18n="suggestion">Taklif / G'oya</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label data-i18n="messageText">Xabar matni</label>
+            <textarea id="req-message" rows="4" placeholder="Murojaat mazmunini yozing..." required></textarea>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-block" data-i18n="sendRequest">Murojaatni Yuborish</button>
+        </form>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- MODAL 1: PAYME / TOP-UP -->
+  <div class="modal" id="modal-payme">
+    <div class="modal-backdrop"></div>
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title" data-i18n="paymeTitle">Balansni To'ldirish</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="payme-form">
+          <div class="gateway-selector">
+            <label class="form-label" data-i18n="chooseGateway">To'lov usulini tanlang</label>
+            <div class="gateway-grid">
+              <label class="gateway-card active">
+                <input type="radio" name="gateway" value="payme" checked>
+                <span class="gateway-name">Payme</span>
+              </label>
+              <label class="gateway-card">
+                <input type="radio" name="gateway" value="skinpay">
+                <span class="gateway-name">SkinPay</span>
+              </label>
+              <label class="gateway-card">
+                <input type="radio" name="gateway" value="yoomoney">
+                <span class="gateway-name">YooMoney</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" data-i18n="steamIdLabel">STEAM ID:</label>
+            <input type="text" id="payme-steamid" placeholder="STEAM_1:1:390... yoki 76561198..." required value="STEAM_1:0:9823412">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" data-i18n="enterAmount">To'ldirish summasi (UZS):</label>
+            <div class="amount-presets">
+              <button type="button" class="preset-btn" data-val="10000">10 000</button>
+              <button type="button" class="preset-btn" data-val="25000">25 000</button>
+              <button type="button" class="preset-btn active" data-val="50000">50 000</button>
+              <button type="button" class="preset-btn" data-val="100000">100 000</button>
+            </div>
+            <input type="number" id="payme-amount" value="50000" min="5000" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" data-i18n="promoLabel">Promokod (mavjud bo'lsa):</label>
+            <input type="text" id="payme-promo" placeholder="PROMO2026">
+          </div>
+
+          <div class="form-group checkbox-group">
+            <input type="checkbox" id="payme-agree" checked required>
+            <label for="payme-agree" data-i18n="termsAgree">Oferta shartnomasiga roziman</label>
+          </div>
+
+          <button type="submit" class="btn btn-wallet btn-block" data-i18n="submitPay">To'lovga o'tish</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 2: STEAM AUTH -->
+  <div class="modal" id="modal-steam">
+    <div class="modal-backdrop"></div>
+    <div class="modal-card center-card">
+      <div class="modal-header">
+        <h3 class="modal-title" data-i18n="steamAuthTitle">Steam Orqali Kirish</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body text-center">
+        <svg class="steam-auth-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M11.979 0C5.678 0 .511 4.86.022 11.037l6.432 2.658c.545-.371 1.203-.59 1.912-.59.063 0 .125.004.188.006l2.861-4.142V8.91c0-2.495 2.028-4.524 4.524-4.524 2.494 0 4.524 2.03 4.524 4.524s-2.03 4.524-4.524 4.524c-.102 0-.201-.009-.302-.014l-4.086 2.923c.005.085.014.17.014.256 0 1.841-1.493 3.334-3.334 3.334-1.507 0-2.775-1.002-3.189-2.385L.43 15.659C1.706 20.5 6.13 24 11.979 24c6.627 0 12-5.373 12-12s-5.373-12-12-12z"/></svg>
+        <p class="modal-desc" data-i18n="steamAuthDesc">Tizimga xavfsiz kirish uchun Steam hisobingizdan foydalaning</p>
+        <button class="btn btn-steam btn-block" id="simulate-steam-login" data-i18n="steamLoginBtn">Steam Bilan Kirish</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 3: LANGUAGE -->
+  <div class="modal" id="modal-lang">
+    <div class="modal-backdrop"></div>
+    <div class="modal-card small-card">
+      <div class="modal-header">
+        <h3 class="modal-title">Kerakli tilni tanlang</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="lang-list">
+          <button class="lang-option active" data-lang="UZ">
+            <span class="flag-icon">🇺🇿</span>
+            <span>O'zbek tili</span>
+          </button>
+          <button class="lang-option" data-lang="RU">
+            <span class="flag-icon">🇷🇺</span>
+            <span>Русский язык</span>
+          </button>
+          <button class="lang-option" data-lang="EN">
+            <span class="flag-icon">🇬🇧</span>
+            <span>English</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Scripts -->
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>

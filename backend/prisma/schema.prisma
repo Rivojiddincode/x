@@ -1,0 +1,73 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  steamId      String   @unique
+  displayName  String
+  avatarUrl    String
+  balance      Float    @default(0)
+  vipRole      String   @default("PLAYER")
+  vipExpiresAt String?
+  createdAt    DateTime @default(now())
+  orders       Order[]
+}
+
+model GameServer {
+  id            String   @id
+  name          String
+  ip            String
+  mode          String
+  map           String
+  onlinePlayers Int      @default(0)
+  maxPlayers    Int      @default(20)
+  ping          Int      @default(5)
+  badge         String
+}
+
+model StoreItem {
+  id          String   @id
+  name        String
+  price       Float
+  period      String
+  popular     Boolean  @default(false)
+  color       String
+  features    String
+}
+
+model Order {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id])
+  itemName    String
+  amount      Float
+  gateway     String
+  status      String   @default("COMPLETED")
+  createdAt   DateTime @default(now())
+}
+
+model BanLog {
+  id        Int      @id @default(autoincrement())
+  name      String
+  steamId   String
+  admin     String
+  reason    String
+  duration  String
+  status    String
+  createdAt String
+}
+
+model RequestTicket {
+  id        Int      @id @default(autoincrement())
+  name      String
+  telegram  String
+  type      String
+  message   String
+  createdAt DateTime @default(now())
+}
