@@ -113,16 +113,17 @@ app.get('/api/v1/auth/steam/login-url', (req, res) => {
   res.json({ success: true, openIdUrl });
 });
 
-// Handle Steam OpenID Redirect Callback
+// Handle Steam OpenID Redirect Callback (User Provided Verified Logic)
 app.get('/api/v1/auth/steam/callback', async (req, res) => {
   const host = req.headers.host || 'stars-shop.uz';
   const protocol = req.headers['x-forwarded-proto'] || (host.includes('localhost') ? 'http' : 'https');
   const frontendOrigin = `${protocol}://${host}`;
 
   try {
+    // 1. Extract 64-bit SteamID from openid.claimed_id URL
     const claimedId = req.query['openid.claimed_id'];
-    let steamId64 = '76561198012345678';
-    
+    let steamId64 = '';
+
     if (claimedId) {
       const matches = claimedId.match(/\/id\/(\d+)$/);
       if (matches && matches[1]) {
@@ -130,29 +131,41 @@ app.get('/api/v1/auth/steam/callback', async (req, res) => {
       }
     }
 
-    let displayName = `Player_${steamId64.slice(-4)}`;
-    let avatarUrl = `https://api.dicebear.com/7.x/bottts/svg?seed=${steamId64}`;
-
-    try {
-      // Fetch real user profile from Steam Web API v2
-      const steamApiUrl = `https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=${STEAM_API_KEY}&steamids=${steamId64}`;
-      const response = await fetch(steamApiUrl);
-      const data = await response.json();
-      const player = data.response?.players?.[0];
-
-      if (player) {
-        displayName = player.personaname || displayName;
-        avatarUrl = player.avatarfull || avatarUrl;
-      }
-    } catch (e) {
-      console.warn('Steam API Fetch Fallback:', e.message);
+    if (!steamId64) {
+      throw new Error("SteamID topilmadi yoki OpenID ma'lumotlari noto'g'ri");
     }
 
+    // 2. Fetch real user profile from Steam Web API v2
+    const steamApiUrl = `https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=${STEAM_API_KEY}&steamids=${steamId64}`;
+    const apiResponse = await fetch(steamApiUrl);
+    
+    if (!apiResponse.ok) {
+      throw new Error("Steam API so'rovida xatolik yuz berdi");
+    }
+
+    const data = await apiResponse.json();
+    const player = data.response?.players?.[0];
+
+    let displayName = player ? player.personaname : `Player_${steamId64.slice(-4)}`;
+    let avatarUrl = player ? player.avatarfull : `https://api.dicebear.com/7.x/bottts/svg?seed=${steamId64}`;
+
+    // Store user session in memory/db
+    db.users[steamId64] = {
+      steamId: steamId64,
+      displayName,
+      avatarUrl,
+      profileUrl: player?.profileurl || `https://steamcommunity.com/profiles/${steamId64}`,
+      balance: 50000,
+      vipRole: 'VIP Diamond'
+    };
+
+    // 3. Redirect to Frontend with User Query Parameters
     const redirectUrl = `${frontendOrigin}/?steamAuth=success&steamId=${steamId64}&name=${encodeURIComponent(displayName)}&avatar=${encodeURIComponent(avatarUrl)}`;
-    res.redirect(redirectUrl);
+    return res.redirect(redirectUrl);
+
   } catch (error) {
-    console.error('Steam Auth Error:', error);
-    res.redirect(`${frontendOrigin}/?steamAuth=success&steamId=76561198012345678&name=Chapanic&avatar=https://api.dicebear.com/7.x/bottts/svg?seed=Chapanic`);
+    console.error("Steam Login Xatoligi:", error.message);
+    return res.redirect(`${frontendOrigin}/?steamAuth=error&message=${encodeURIComponent(error.message)}`);
   }
 });
 

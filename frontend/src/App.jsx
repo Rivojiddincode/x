@@ -58,7 +58,10 @@ export default function App() {
       localStorage.setItem('starscs_user', JSON.stringify(userData));
       setActiveTab('profile');
       showToastMsg(`Steam rasmiy avtorizatsiyasi muvaffaqiyatli! Xush kelibsiz, ${userData.displayName}!`);
-      // Clean query params from URL bar
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (urlParams.get('steamAuth') === 'error') {
+      const msg = urlParams.get('message') || 'Steam avtorizatsiyasida xatolik yuz berdi';
+      showToastMsg(`Steam xatoligi: ${msg}`);
       window.history.replaceState({}, document.title, window.location.pathname);
     }
 
