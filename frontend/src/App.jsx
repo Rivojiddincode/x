@@ -23,7 +23,16 @@ export default function App() {
   const [showPaymeModal, setShowPaymeModal] = useState(false);
   const [paymeAmount, setPaymeAmount] = useState(50000);
   const [paymeSteamId, setPaymeSteamId] = useState('STEAM_1:0:9823412');
-  const [user, setUser] = useState(null);
+
+  // Persistent User State from localStorage
+  const [user, setUser] = useState(() => {
+    try {
+      const saved = localStorage.getItem('starscs_user');
+      return saved ? JSON.parse(saved) : null;
+    } catch (e) {
+      return null;
+    }
+  });
 
   // Request Form State
   const [reqForm, setReqForm] = useState({ name: '', telegram: '', type: 'admin', message: '' });
@@ -36,15 +45,19 @@ export default function App() {
       const name = urlParams.get('name');
       const avatar = urlParams.get('avatar');
       
-      setUser({
-        steamId,
+      const userData = {
+        steamId: steamId || '76561198012345678',
         displayName: name || 'Steam Player',
         avatarUrl: avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${steamId}`,
+        profileUrl: `https://steamcommunity.com/profiles/${steamId}`,
         balance: 50000,
         vipRole: 'VIP Diamond'
-      });
+      };
+
+      setUser(userData);
+      localStorage.setItem('starscs_user', JSON.stringify(userData));
       setActiveTab('profile');
-      showToastMsg(`Steam rasmiy avtorizatsiyasi muvaffaqiyatli! Xush kelibsiz, ${name}!`);
+      showToastMsg(`Steam rasmiy avtorizatsiyasi muvaffaqiyatli! Xush kelibsiz, ${userData.displayName}!`);
       // Clean query params from URL bar
       window.history.replaceState({}, document.title, window.location.pathname);
     }
@@ -58,6 +71,13 @@ export default function App() {
   const showToastMsg = (msg) => {
     setToast(msg);
     setTimeout(() => setToast(null), 4000);
+  };
+
+  const handleLogout = () => {
+    setUser(null);
+    localStorage.removeItem('starscs_user');
+    showToastMsg('Tizimdan chiqildi.');
+    setActiveTab('servers');
   };
 
   const fetchServers = async () => {
@@ -193,7 +213,7 @@ export default function App() {
         {activeTab === 'profile' && (
           <ProfileView 
             user={user} 
-            onLogout={() => { setUser(null); showToastMsg('Tizimdan chiqildi.'); setActiveTab('servers'); }} 
+            onLogout={handleLogout} 
             onOpenPayme={() => setShowPaymeModal(true)} 
           />
         )}
