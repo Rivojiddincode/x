@@ -29,6 +29,25 @@ export default function App() {
   const [reqForm, setReqForm] = useState({ name: '', telegram: '', type: 'admin', message: '' });
 
   useEffect(() => {
+    // Check Steam OpenID URL Callback Params
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('steamAuth') === 'success') {
+      const steamId = urlParams.get('steamId');
+      const name = urlParams.get('name');
+      const avatar = urlParams.get('avatar');
+      
+      setUser({
+        steamId,
+        displayName: name || 'Steam Player',
+        avatarUrl: avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${steamId}`,
+        balance: 50000,
+        vipRole: 'VIP Diamond'
+      });
+      showToastMsg(`Steam rasmiy avtorizatsiyasi muvaffaqiyatli! Xush kelibsiz, ${name}!`);
+      // Clean query params from URL bar
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
     fetchServers();
     fetchStore();
     fetchLeaderboard();
@@ -94,12 +113,16 @@ export default function App() {
 
   const handleSteamLogin = async () => {
     try {
-      const res = await apiClient.authenticateSteam();
-      if (res.success) {
-        setUser(res.user);
-        setShowSteamModal(false);
-        showToastMsg(`Steam authentication success! Xush kelibsiz, ${res.user.displayName}!`);
-      }
+      const openIdUrl = `https://steamcommunity.com/openid/login?` + new URLSearchParams({
+        'openid.ns': 'http://specs.openid.net/auth/2.0',
+        'openid.mode': 'checkid_setup',
+        'openid.return_to': `${window.location.protocol}//${window.location.host}/api/v1/auth/steam/callback`,
+        'openid.realm': `${window.location.protocol}//${window.location.host}`,
+        'openid.identity': 'http://specs.openid.net/auth/2.0/identifier_select',
+        'openid.claimed_id': 'http://specs.openid.net/auth/2.0/identifier_select'
+      }).toString();
+
+      window.location.href = openIdUrl;
     } catch (e) {
       showToastMsg('Steam login xatoligi');
     }
@@ -199,8 +222,13 @@ export default function App() {
         <div className="modal">
           <div className="modal-box" style={{ textAlign: 'center' }}>
             <h3>⭐ StarsCS Steam OpenID Auth</h3>
-            <p style={{ color: 'var(--text-muted)', margin: '16px 0' }}>Steam Community orqali xavfsiz avtorizatsiya</p>
-            <button className="btn btn-steam" style={{ width: '100%' }} onClick={handleSteamLogin}>Steam Account Bilan Kirish</button>
+            <p style={{ color: 'var(--text-muted)', margin: '16px 0' }}>Steam Community orqali rasmiy va xavfsiz avtorizatsiya</p>
+            <button className="btn btn-steam" style={{ width: '100%', justifyContent: 'center' }} onClick={handleSteamLogin}>
+              <svg className="steam-official-icon" viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                <path d="M11.979 0C5.678 0 .511 4.86.022 11.037l6.432 2.658c.545-.371 1.203-.59 1.912-.59.063 0 .125.004.188.006l2.861-4.142V8.91c0-2.495 2.028-4.524 4.524-4.524 2.494 0 4.524 2.03 4.524 4.524s-2.03 4.524-4.524 4.524c-.102 0-.201-.009-.302-.014l-4.086 2.923c.005.085.014.17.014.256 0 1.841-1.493 3.334-3.334 3.334-1.507 0-2.775-1.002-3.189-2.385L.43 15.659C1.706 20.5 6.13 24 11.979 24c6.627 0 12-5.373 12-12s-5.373-12-12-12z"/>
+              </svg>
+              Steam Account Bilan Kirish
+            </button>
           </div>
         </div>
       )}
