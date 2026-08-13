@@ -89,7 +89,7 @@ model SkinListing {
   instanceId     String
   marketHashName String
   iconUrl        String
-  price          Float    // in USD / UZS, minimum enforced at API layer
+  price          Float    // in USD, minimum 0.5 enforced at the API layer
   status         String   @default("ACTIVE") // ACTIVE | PENDING | SOLD | CANCELLED
   createdAt      DateTime @default(now())
   transaction    SkinTransaction?
