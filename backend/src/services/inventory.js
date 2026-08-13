@@ -20,9 +20,12 @@ export async function fetchInventory(steamId64) {
   return new Promise((resolve, reject) => {
     community.getUserInventoryContents(steamId64, CS2_APP_ID, CS2_CONTEXT_ID, true, (err, inventory) => {
       if (err) {
-        // steamcommunity library surfaces Steam's own error text here (e.g. "profile is private")
+        console.error('[inventory] Steam xatosi:', err.message, err);
         return reject(new Error(err.message || 'Steam inventarni qaytarmadi'));
       }
+
+      console.log('[inventory] Steam\'dan xom (raw) natija:', JSON.stringify(inventory)?.slice(0, 500));
+      console.log('[inventory] Jami item soni:', (inventory || []).length);
 
       const items = (inventory || []).map((item) => ({
         assetId: item.assetid || item.id,
