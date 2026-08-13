@@ -64,73 +64,16 @@ export function SkinMarketView({ user, onToast }) {
     setLoadingInventory(true);
     setInventory([]);
     try {
-      // Brauzerdan to'g'ridan-to'g'ri Steam ga — Render IP bloki yo'q
-      const steamUrl = `https://steamcommunity.com/inventory/${user.steamId}/730/2?l=english&count=5000`;
-      const res = await fetch(steamUrl);
-
-      if (!res.ok) {
-        if (res.status === 403) {
-          onToast?.('Steam inventaringiz yopiq (Private). Steam > Sozlamalar > Maxfiylik > Inventar > Public qiling');
-        } else {
-          onToast?.(`Steam xatosi: ${res.status}`);
-        }
-        return;
-      }
-
+      const res = await fetch(`${API_BASE}/market/inventory/${user.steamId}`);
       const data = await res.json();
-
-      if (!data?.success) {
-        onToast?.('Steam inventarni qaytarmadi. Inventaringiz Public ekanligini tekshiring.');
-        return;
-      }
-
-      const assets = data.assets || [];
-      const descriptions = data.descriptions || [];
-
-      // classid+instanceid → description map
-      const descMap = {};
-      for (const d of descriptions) {
-        descMap[`${d.classid}_${d.instanceid}`] = d;
-      }
-
-      const items = assets.map((asset) => {
-        const desc = descMap[`${asset.classid}_${asset.instanceid}`] || {};
-        return {
-          assetId: asset.assetid,
-          classId: asset.classid,
-          instanceId: asset.instanceid,
-          marketHashName: desc.market_hash_name || desc.name || 'Noma\'lum item',
-          iconUrl: desc.icon_url
-            ? `https://community.akamai.steamstatic.com/economy/image/${desc.icon_url}`
-            : '',
-          tradable: desc.tradable === 1,
-          marketable: desc.marketable === 1,
-          type: desc.type || '',
-        };
-      });
-
-      setInventory(items);
-      if (items.length === 0) {
-        onToast?.('CS2 inventaringiz bo\'sh yoki barcha itemlar trade hold da');
+      if (data.success) {
+        setInventory(data.items);
+        if (data.items.length === 0) onToast?.('Inventaringizda sotish mumkin bo\'lgan item topilmadi');
       } else {
-        onToast?.(`✅ ${items.length} ta item topildi`);
+        onToast?.(data.message || 'Inventarni yuklab bo\'lmadi');
       }
     } catch (e) {
-      // CORS xatosi bo'lsa server proxy ga fallback
-      console.warn('[inventory] Browser fetch xatosi, server proxy ga o\'tilmoqda:', e.message);
-      try {
-        const res = await fetch(`${API_BASE}/market/inventory/${user.steamId}`);
-        const data = await res.json();
-        if (data.success) {
-          setInventory(data.items);
-          if (data.items.length === 0) onToast?.('Inventaringizda item topilmadi');
-          else onToast?.(`✅ ${data.items.length} ta item topildi`);
-        } else {
-          onToast?.(data.message || 'Inventarni yuklab bo\'lmadi');
-        }
-      } catch {
-        onToast?.('Inventarni yuklashda xatolik yuz berdi');
-      }
+      onToast?.('Inventarni yuklashda xatolik');
     } finally {
       setLoadingInventory(false);
     }
@@ -318,6 +261,9 @@ function SellTab({
         <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '6px 0 12px' }}>
           Steam &gt; Inventar &gt; Trade Offers &gt; Trade URL dan nusxa oling.
           {user.tradeUrl && <span style={{ color: 'var(--green)', marginLeft: '6px' }}><CheckCircle2 size={12} style={{ verticalAlign: 'middle' }} /> Saqlangan</span>}
+        </p>
+        <p style={{ fontSize: '12px', color: '#f5a623', margin: '0 0 12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <AlertCircle size={13} /> Faqat hozir saytga kirgan Steam akkauntingizning o'z trade link'ini kiriting — boshqa akkaunt link'i qabul qilinmaydi.
         </p>
         <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
           <input
