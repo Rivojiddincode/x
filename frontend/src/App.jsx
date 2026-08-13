@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { apiClient } from './api/client';
+import { apiClient, API_BASE } from './api/client';
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
 import { ServerList } from './components/ServerList';
@@ -38,33 +38,54 @@ export default function App() {
   const [reqForm, setReqForm] = useState({ name: '', telegram: '', type: 'admin', message: '' });
 
   useEffect(() => {
-    // Check Steam OpenID URL Callback Params
+    // Check Steam OpenID URL Callback Params & Sync with Database
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('steamAuth') === 'success') {
-      const steamId = urlParams.get('steamId');
-      const name = urlParams.get('name');
-      const avatar = urlParams.get('avatar');
-      const balance = parseInt(urlParams.get('balance') || '0', 10);
+      const steamId = urlParams.get('steamId') || '76561198012345678';
+      const name = urlParams.get('name') || 'Steam Player';
+      const avatar = urlParams.get('avatar') || `https://api.dicebear.com/7.x/bottts/svg?seed=${steamId}`;
+      const balance = Number(urlParams.get('balance') ?? 0);
       const vipRole = urlParams.get('vipRole') || "Oddiy O'yinchi";
-      
+
       const userData = {
         steamId,
-        displayName: name || 'Steam Player',
-        avatarUrl: avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${steamId}`,
+        displayName: name,
+        avatarUrl: avatar,
         profileUrl: `https://steamcommunity.com/profiles/${steamId}`,
-        balance: isNaN(balance) ? 0 : balance, // SECURE: Starts with 0 UZS
-        vipRole: vipRole // SECURE: Starts as regular player
+        balance,
+        vipRole
       };
+
+      // Sync to Database
+      fetch(`${API_BASE}/auth/steam/sync`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(userData)
+      }).catch(err => console.log('DB sync offline'));
 
       setUser(userData);
       localStorage.setItem('starscs_user', JSON.stringify(userData));
+      localStorage.setItem('starscs_steam_id', steamId);
       setActiveTab('profile');
-      showToastMsg(`Steam rasmiy avtorizatsiyasi muvaffaqiyatli! Xush kelibsiz, ${userData.displayName}!`);
+      showToastMsg(`Steam orqali muvaffaqiyatli kirdingiz! Xush kelibsiz, ${userData.displayName}!`);
       window.history.replaceState({}, document.title, window.location.pathname);
     } else if (urlParams.get('steamAuth') === 'error') {
       const msg = urlParams.get('message') || 'Steam avtorizatsiyasida xatolik yuz berdi';
       showToastMsg(`Steam xatoligi: ${msg}`);
       window.history.replaceState({}, document.title, window.location.pathname);
+    } else {
+      // Fetch user from Database on load
+      const savedSteamId = localStorage.getItem('starscs_steam_id');
+      if (savedSteamId) {
+        fetch(`${API_BASE}/auth/steam/user/${savedSteamId}`)
+          .then(res => res.json())
+          .then(data => {
+            if (data.success && data.user) {
+              setUser(data.user);
+            }
+          })
+          .catch(err => console.log('Could not fetch user from DB:', err));
+      }
     }
 
     fetchServers();
@@ -81,6 +102,7 @@ export default function App() {
   const handleLogout = () => {
     setUser(null);
     localStorage.removeItem('starscs_user');
+    localStorage.removeItem('starscs_steam_id');
     showToastMsg('Tizimdan chiqildi.');
     setActiveTab('servers');
   };
@@ -137,24 +159,18 @@ export default function App() {
     }
   };
 
-  // Secure Steam OpenID Auth Redirect using Backend Login Endpoint
+  // Real Steam OpenID Login Handler — redirects to Steam's actual login page
   const handleSteamLogin = async () => {
     try {
-      const origin = window.location.origin;
-      const returnTo = `${origin}/api/v1/auth/steam/callback`;
-
-      const openIdUrl = `https://steamcommunity.com/openid/login?` + new URLSearchParams({
-        'openid.ns': 'http://specs.openid.net/auth/2.0',
-        'openid.mode': 'checkid_setup',
-        'openid.return_to': returnTo,
-        'openid.realm': origin,
-        'openid.identity': 'http://specs.openid.net/auth/2.0/identifier_select',
-        'openid.claimed_id': 'http://specs.openid.net/auth/2.0/identifier_select'
-      }).toString();
-
-      window.location.href = openIdUrl;
+      const res = await fetch(`${API_BASE}/auth/steam/login-url?frontend=${encodeURIComponent(window.location.origin)}`);
+      const data = await res.json();
+      if (data.success && data.openIdUrl) {
+        window.location.href = data.openIdUrl;
+      } else {
+        showToastMsg('Steam login havolasini olishda xatolik yuz berdi');
+      }
     } catch (err) {
-      showToastMsg("Steam bilan bog'lanib bo'lmadi");
+      showToastMsg('Steam bilan bog\'lanib bo\'mladi. Internetni tekshiring.');
     }
   };
 
@@ -186,11 +202,11 @@ export default function App() {
         user={user}
       />
 
-      {/* Modular Hero */}
-      <Hero totalOnline={totalOnline} />
+      {/* Hero Section - ONLY rendered on the main servers page */}
+      {activeTab === 'servers' && <Hero totalOnline={totalOnline} />}
 
       {/* Main View Components */}
-      <main className="main container">
+      <main className="main container" style={{ marginTop: activeTab !== 'servers' ? '32px' : '0' }}>
         {activeTab === 'servers' && (
           <ServerList 
             servers={servers} 
