@@ -3,7 +3,7 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "https://starscs-backend.onrender.com/api/$1"
+      "destination": "https://x-k0u0.onrender.com/api/$1"
     },
     {
       "source": "/(.*)",
