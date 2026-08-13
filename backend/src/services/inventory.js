@@ -30,10 +30,13 @@ export async function fetchInventory(steamId64) {
         instanceId: item.instanceid,
         marketHashName: item.market_hash_name || 'Noma\'lum item',
         iconUrl: item.icon_url ? `https://community.akamai.steamstatic.com/economy/image/${item.icon_url}` : '',
-        tradable: !!item.tradable,
+        // Steam already filtered to tradable-only (we passed tradableOnly=true above),
+        // so don't re-filter here — some steamcommunity versions don't set an explicit
+        // `.tradable` boolean per item, which previously caused everything to be dropped.
+        tradable: item.tradable !== false,
         marketable: !!item.marketable,
         type: item.type || '',
-      })).filter((item) => item.tradable);
+      }));
 
       resolve(items);
     });
