@@ -1,57 +1,43 @@
 // StarsCS Skin Marketplace — Inventory Service
-// Fetches a user's CS2 inventory directly from Steam's public inventory endpoint.
+// Fetches a user's CS2 inventory using the bot's authenticated Steam session.
+//
+// IMPORTANT: we deliberately do NOT use a plain anonymous fetch() to
+// steamcommunity.com/inventory/... — Steam aggressively rate-limits/blocks
+// anonymous requests coming from datacenter IPs (like Render's), often
+// returning 401 even for fully public inventories. Routing the request
+// through the bot's already-authenticated SteamCommunity session avoids this.
+
+import { community, isBotReady } from './steamBot.js';
 
 const CS2_APP_ID = 730;
 const CS2_CONTEXT_ID = 2;
 
-/**
- * Trade link'dan SteamID64'ni chiqarib olib bo'lmaydi to'g'ridan-to'g'ri (u faqat
- * partner ID va token beradi). Lekin bizning saytda user Steam OpenID orqali kirgan
- * bo'lgani uchun, uning steamId biz tomonda allaqachon bor (session/DB'da).
- * Shuning uchun bu funksiya to'g'ridan-to'g'ri steamId qabul qiladi;
- * trade link esa faqat "qayerga yuborish" manzili sifatida alohida saqlanadi.
- */
 export async function fetchInventory(steamId64) {
-  const url = `https://steamcommunity.com/inventory/${steamId64}/${CS2_APP_ID}/${CS2_CONTEXT_ID}?l=english&count=200`;
+  if (!isBotReady()) {
+    throw new Error('Bot hali Steam\'ga ulanmagan, birozdan keyin qayta urinib ko\'ring');
+  }
 
-  const res = await fetch(url, {
-    headers: { 'User-Agent': 'Mozilla/5.0 (StarsCS Inventory Fetcher)' },
+  return new Promise((resolve, reject) => {
+    community.getUserInventoryContents(steamId64, CS2_APP_ID, CS2_CONTEXT_ID, true, (err, inventory) => {
+      if (err) {
+        // steamcommunity library surfaces Steam's own error text here (e.g. "profile is private")
+        return reject(new Error(err.message || 'Steam inventarni qaytarmadi'));
+      }
+
+      const items = (inventory || []).map((item) => ({
+        assetId: item.assetid || item.id,
+        classId: item.classid,
+        instanceId: item.instanceid,
+        marketHashName: item.market_hash_name || 'Noma\'lum item',
+        iconUrl: item.icon_url ? `https://community.akamai.steamstatic.com/economy/image/${item.icon_url}` : '',
+        tradable: !!item.tradable,
+        marketable: !!item.marketable,
+        type: item.type || '',
+      })).filter((item) => item.tradable);
+
+      resolve(items);
+    });
   });
-
-  if (res.status === 403) {
-    throw new Error('Inventar yopiq (private). Steam maxfiylik sozlamalarida inventarni "Public" qiling.');
-  }
-  if (!res.ok) {
-    throw new Error(`Steam inventarni qaytarmadi (status ${res.status})`);
-  }
-
-  const data = await res.json();
-  if (!data || !data.assets || !data.descriptions) {
-    return [];
-  }
-
-  // descriptions classid+instanceid bo'yicha assets bilan bog'lanadi
-  const descMap = {};
-  for (const desc of data.descriptions) {
-    descMap[`${desc.classid}_${desc.instanceid}`] = desc;
-  }
-
-  const items = data.assets.map((asset) => {
-    const desc = descMap[`${asset.classid}_${asset.instanceid}`] || {};
-    return {
-      assetId: asset.assetid,
-      classId: asset.classid,
-      instanceId: asset.instanceid,
-      marketHashName: desc.market_hash_name || 'Noma\'lum item',
-      iconUrl: desc.icon_url ? `https://community.akamai.steamstatic.com/economy/image/${desc.icon_url}` : '',
-      tradable: desc.tradable === 1,
-      marketable: desc.marketable === 1,
-      type: desc.type || '',
-    };
-  });
-
-  // Faqat hozir trade qilsa bo'ladigan (cooldown'da bo'lmagan) itemlarni ko'rsatamiz
-  return items.filter((item) => item.tradable);
 }
 
 /**
