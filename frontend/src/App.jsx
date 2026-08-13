@@ -7,6 +7,7 @@ import { StoreView } from './components/StoreView';
 import { LeaderboardView } from './components/LeaderboardView';
 import { BansView, RequestsView } from './components/BansView';
 import { ProfileView } from './components/ProfileView';
+import { SkinMarketView } from './components/SkinMarketView';
 import './styles/main.css';
 
 export default function App() {
@@ -225,6 +226,10 @@ export default function App() {
 
         {activeTab === 'leaderboard' && (
           <LeaderboardView leaderboard={leaderboard} />
+        )}
+
+        {activeTab === 'skins' && (
+          <SkinMarketView user={user} onToast={showToastMsg} />
         )}
 
         {activeTab === 'profile' && (
