@@ -2,10 +2,12 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import { db } from './services/db.js';
+import marketRouter, { registerTradeStateWatcher } from './routes/marketplace.js';
+import { startBot } from './services/steamBot.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-const STEAM_API_KEY = process.env.STEAM_API_KEY || 'B677B149ED047B15E06644583D97A937';
+const STEAM_API_KEY = process.env.STEAM_API_KEY;
 
 app.use(cors());
 app.use(express.json());
@@ -15,6 +17,9 @@ app.use((req, res, next) => {
   console.log(`[API] ${req.method} ${req.url}`);
   next();
 });
+
+// Skin Marketplace routes (listings, inventory, buy/sell escrow flow)
+app.use('/api/v1/market', marketRouter);
 
 // Health check
 app.get('/api/v1/health', (req, res) => {
@@ -265,3 +270,7 @@ app.post('/api/v1/auth/steam/sync', (req, res) => {
 app.listen(PORT, () => {
   console.log(`🚀 StarsCS Backend REST API listening on http://localhost:${PORT}`);
 });
+
+// Boot the Steam trade bot and start watching escrow trade offer states.
+startBot();
+registerTradeStateWatcher();

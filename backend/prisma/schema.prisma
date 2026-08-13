@@ -15,8 +15,12 @@ model User {
   balance      Float    @default(0)
   vipRole      String   @default("PLAYER")
   vipExpiresAt String?
+  tradeUrl     String?
   createdAt    DateTime @default(now())
   orders       Order[]
+  sellingListings SkinListing[]    @relation("SellerListings")
+  purchases       SkinTransaction[] @relation("BuyerTransactions")
+  sales           SkinTransaction[] @relation("SellerTransactions")
 }
 
 model GameServer {
@@ -70,4 +74,42 @@ model RequestTicket {
   type      String
   message   String
   createdAt DateTime @default(now())
+}
+
+// -------------------------------------------------------
+// SKIN MARKETPLACE (P2P, fixed-price, bot-escrow model)
+// -------------------------------------------------------
+
+model SkinListing {
+  id             Int      @id @default(autoincrement())
+  sellerId       Int
+  seller         User     @relation("SellerListings", fields: [sellerId], references: [id])
+  assetId        String   // Steam inventory asset id (identifies the exact item instance)
+  classId        String
+  instanceId     String
+  marketHashName String
+  iconUrl        String
+  price          Float    // in USD / UZS, minimum enforced at API layer
+  status         String   @default("ACTIVE") // ACTIVE | PENDING | SOLD | CANCELLED
+  createdAt      DateTime @default(now())
+  transaction    SkinTransaction?
+}
+
+model SkinTransaction {
+  id                      Int      @id @default(autoincrement())
+  listingId               Int      @unique
+  listing                 SkinListing @relation(fields: [listingId], references: [id])
+  buyerId                 Int
+  buyer                   User     @relation("BuyerTransactions", fields: [buyerId], references: [id])
+  sellerId                Int
+  seller                  User     @relation("SellerTransactions", fields: [sellerId], references: [id])
+  price                   Float
+  // AWAITING_SELLER_TRADE -> BOT_HOLDING_ITEM -> AWAITING_BUYER_TRADE -> COMPLETED
+  // (or -> FAILED / CANCELLED at any stage)
+  status                  String   @default("AWAITING_SELLER_TRADE")
+  botToSellerTradeOfferId String?
+  botToBuyerTradeOfferId  String?
+  failReason              String?
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
 }

@@ -12,7 +12,11 @@
     "cors": "^2.8.6",
     "dotenv": "^16.6.1",
     "express": "^4.22.2",
-    "jsonwebtoken": "^9.0.3"
+    "jsonwebtoken": "^9.0.3",
+    "steam-user": "^5.0.0",
+    "steamcommunity": "^3.47.0",
+    "steam-tradeoffer-manager": "^2.10.0",
+    "steam-totp": "^2.1.2"
   },
   "devDependencies": {
     "prisma": "^5.8.0"
