@@ -414,7 +414,16 @@
       <div class="modal-body text-center">
         <svg class="steam-auth-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M11.979 0C5.678 0 .511 4.86.022 11.037l6.432 2.658c.545-.371 1.203-.59 1.912-.59.063 0 .125.004.188.006l2.861-4.142V8.91c0-2.495 2.028-4.524 4.524-4.524 2.494 0 4.524 2.03 4.524 4.524s-2.03 4.524-4.524 4.524c-.102 0-.201-.009-.302-.014l-4.086 2.923c.005.085.014.17.014.256 0 1.841-1.493 3.334-3.334 3.334-1.507 0-2.775-1.002-3.189-2.385L.43 15.659C1.706 20.5 6.13 24 11.979 24c6.627 0 12-5.373 12-12s-5.373-12-12-12z"/></svg>
         <p class="modal-desc" data-i18n="steamAuthDesc">Tizimga xavfsiz kirish uchun Steam hisobingizdan foydalaning</p>
-        <button class="btn btn-steam btn-block" id="simulate-steam-login" data-i18n="steamLoginBtn">Steam Bilan Kirish</button>
+
+        <form id="direct-steam-form" style="margin-top: 15px; text-align: left;">
+          <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 6px;">Steam Nikingiz yoki Steam ID64 kiriting:</label>
+          <input type="text" id="steam-input-id" value="Chapanic" placeholder="Masalan: Chapanic yoki 76561198098234123" required style="width: 100%; padding: 10px 14px; border-radius: 6px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.18); color: #fff; font-size: 14px; margin-bottom: 12px; box-sizing: border-box;" />
+          <button type="submit" class="btn btn-steam btn-block" style="justify-content: center; width: 100%;">Steam Bilan Kirish hamda Bazaga Saqlash</button>
+        </form>
+
+        <div style="margin-top: 14px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.08); font-size: 12px; color: var(--text-muted);">
+          Yoki <a href="#" id="open-steam-popup" style="color: var(--accent-color); font-weight: 600; text-decoration: underline;">Steam Community (Chrome Popup)</a> orqali kiring
+        </div>
       </div>
     </div>
   </div>

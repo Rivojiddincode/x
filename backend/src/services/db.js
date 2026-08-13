@@ -33,5 +33,6 @@ export const db = {
     { id: 3, name: "NoobMaster", steamId: "STEAM_1:0:1930291", date: "2026-08-11 20:05", admin: "System Auto-AntiCheat", reason: "Spinbot Detector", duration: "Muddatsiz (Ban)", status: "Active" }
   ],
   requests: [],
-  payments: []
+  payments: [],
+  users: {}
 };

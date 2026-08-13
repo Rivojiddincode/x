@@ -4,10 +4,6 @@
     {
       "source": "/api/(.*)",
       "destination": "https://starscs-backend.onrender.com/api/$1"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
     }
   ]
 }

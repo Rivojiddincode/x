@@ -3,6 +3,9 @@ import { storeItems } from './data/store.js';
 import { leaderboardData, punishmentsData, rewardsData, clansData } from './data/leaderboard.js';
 import { translations } from './data/translations.js';
 
+const isLocalhost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+const API_BASE = isLocalhost ? 'http://localhost:5000/api/v1' : '/api/v1';
+
 // Global Application State
 const state = {
   lang: 'UZ',
@@ -14,11 +17,113 @@ const state = {
   punishments: [...punishmentsData],
   rewards: [...rewardsData],
   clans: [...clansData],
-  totalOnline: 224
+  totalOnline: 224,
+  user: null
 };
+
+// Steam Auth & User Session Persistence via Backend Database & Instant UI Update
+async function initUserAuth() {
+  // 1. Load cached user from localStorage immediately for instant UI render
+  try {
+    const savedUser = localStorage.getItem('starscs_user');
+    if (savedUser) {
+      state.user = JSON.parse(savedUser);
+    }
+  } catch (e) {
+    console.error('LocalStorage parse error:', e);
+  }
+
+  const urlParams = new URLSearchParams(window.location.search);
+
+  if (urlParams.get('steamAuth') === 'success') {
+    const steamId = urlParams.get('steamId') || '76561198098234123';
+    const name = urlParams.get('name') || 'Chapanic';
+    const avatar = urlParams.get('avatar') || `https://api.dicebear.com/7.x/bottts/svg?seed=${steamId}`;
+
+    const userData = {
+      steamId,
+      displayName: name,
+      avatarUrl: avatar,
+      balance: 50000,
+      vipRole: 'VIP Diamond'
+    };
+
+    state.user = userData;
+    localStorage.setItem('starscs_steam_id', steamId);
+    localStorage.setItem('starscs_user', JSON.stringify(userData));
+    showToast(`Steam account bilan muvaffaqiyatli kirildi! Xush kelibsiz, ${userData.displayName}`, 'success');
+
+    // Sync user directly into Backend Database
+    try {
+      fetch(`${API_BASE}/auth/steam/sync`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(userData)
+      });
+    } catch (e) {}
+
+    window.history.replaceState({}, document.title, window.location.pathname);
+  } else {
+    // 2. Fetch fresh user profile from Backend Database if online
+    const savedSteamId = localStorage.getItem('starscs_steam_id');
+    if (savedSteamId) {
+      try {
+        const dbRes = await fetch(`${API_BASE}/auth/steam/user/${savedSteamId}`);
+        if (dbRes.ok) {
+          const dbData = await dbRes.json();
+          if (dbData.success && dbData.user) {
+            state.user = dbData.user;
+            localStorage.setItem('starscs_user', JSON.stringify(dbData.user));
+          }
+        }
+      } catch (e) {
+        console.log('Backend DB offline, keeping local user state');
+      }
+    }
+  }
+
+  renderUserHeader();
+}
+
+function renderUserHeader() {
+  const loginBtn = document.getElementById('open-steam-modal');
+  if (!loginBtn) return;
+
+  if (state.user) {
+    loginBtn.className = 'btn btn-steam user-logged-btn';
+    loginBtn.style.display = 'inline-flex';
+    loginBtn.style.alignItems = 'center';
+    loginBtn.style.gap = '8px';
+    loginBtn.innerHTML = `
+      <img src="${state.user.avatarUrl}" alt="Avatar" style="width: 24px; height: 24px; border-radius: 50%; object-fit: cover;" />
+      <span style="font-weight: 600; max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${state.user.displayName}</span>
+      <button id="logout-btn" title="Tizimdan chiqish" style="background: rgba(255,255,255,0.15); border: none; color: #ff6b6b; cursor: pointer; border-radius: 4px; padding: 2px 6px; font-weight: bold; font-size: 12px; margin-left: 2px;">✕</button>
+    `;
+
+    // Payme steamId field auto-fill
+    const paymeSteamInput = document.getElementById('payme-steamid');
+    if (paymeSteamInput) {
+      paymeSteamInput.value = state.user.steamId;
+    }
+  } else {
+    loginBtn.className = 'btn btn-steam';
+    loginBtn.innerHTML = `
+      <svg class="btn-icon steam-logo" viewBox="0 0 24 24" fill="currentColor"><path d="M11.979 0C5.678 0 .511 4.86.022 11.037l6.432 2.658c.545-.371 1.203-.59 1.912-.59.063 0 .125.004.188.006l2.861-4.142V8.91c0-2.495 2.028-4.524 4.524-4.524 2.494 0 4.524 2.03 4.524 4.524s-2.03 4.524-4.524 4.524c-.102 0-.201-.009-.302-.014l-4.086 2.923c.005.085.014.17.014.256 0 1.841-1.493 3.334-3.334 3.334-1.507 0-2.775-1.002-3.189-2.385L.43 15.659C1.706 20.5 6.13 24 11.979 24c6.627 0 12-5.373 12-12s-5.373-12-12-12z"/></svg>
+      <span data-i18n="login">${getI18n('login')}</span>
+    `;
+  }
+}
+
+function handleLogout() {
+  state.user = null;
+  localStorage.removeItem('starscs_user');
+  renderUserHeader();
+  showToast('Tizimdan chiqildi.', 'info');
+}
 
 // DOM Elements Initialization
 document.addEventListener('DOMContentLoaded', () => {
+  initUserAuth();
   initNavigation();
   initModals();
   initFilters();
@@ -302,7 +407,21 @@ function initSearch() {
 function initModals() {
   // Payme modal triggers
   document.getElementById('open-payme-modal')?.addEventListener('click', () => openModal('modal-payme'));
-  document.getElementById('open-steam-modal')?.addEventListener('click', () => openModal('modal-steam'));
+  
+  // Steam login & user click handler
+  document.getElementById('open-steam-modal')?.addEventListener('click', (e) => {
+    if (e.target.id === 'logout-btn' || e.target.closest('#logout-btn')) {
+      e.stopPropagation();
+      handleLogout();
+      return;
+    }
+    if (!state.user) {
+      openModal('modal-steam');
+    } else {
+      showToast(`Siz Steam orqali kergansiz: ${state.user.displayName}`, 'info');
+    }
+  });
+
   document.getElementById('open-lang-modal')?.addEventListener('click', () => openModal('modal-lang'));
 
   // Close triggers
@@ -334,12 +453,71 @@ function initModals() {
     });
   });
 
-  // Steam Auth Simulation
-  document.getElementById('simulate-steam-login')?.addEventListener('click', () => {
-    showToast('Steam account bilan muvaffaqiyatli kirildi! Xush kelibsiz, Chapanic', 'success');
+  // Direct Steam Login Form Submission (Chrome In-Page + DB Sync)
+  document.getElementById('direct-steam-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const inputValue = document.getElementById('steam-input-id')?.value.trim() || 'Chapanic';
+    const isId = /^\d{17}$/.test(inputValue);
+    const steamId = isId ? inputValue : '76561198098234123';
+    const displayName = isId ? `Player_${inputValue.slice(-4)}` : inputValue;
+
+    const userData = {
+      steamId,
+      displayName,
+      avatarUrl: `https://api.dicebear.com/7.x/bottts/svg?seed=${steamId}`,
+      balance: 50000,
+      vipRole: 'VIP Diamond'
+    };
+
+    // INSTANTLY UPDATE CURRENT BROWSER UI STATE
+    state.user = userData;
+    localStorage.setItem('starscs_steam_id', steamId);
+    localStorage.setItem('starscs_user', JSON.stringify(userData));
+
+    renderUserHeader();
     document.getElementById('modal-steam')?.classList.remove('active');
-    const loginBtn = document.getElementById('open-steam-modal');
-    if (loginBtn) loginBtn.innerHTML = `<span>Chapanic</span>`;
+    showToast(`Steam account bilan muvaffaqiyatli kirildi! Xush kelibsiz, ${displayName}`, 'success');
+
+    // Sync to Backend Database
+    try {
+      await fetch(`${API_BASE}/auth/steam/sync`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(userData)
+      });
+    } catch (err) {
+      console.log('DB sync offline');
+    }
+  });
+
+  // Steam Community Chrome Popup Link
+  document.getElementById('open-steam-popup')?.addEventListener('click', async (e) => {
+    e.preventDefault();
+    let openIdUrl = '';
+
+    try {
+      const res = await fetch(`${API_BASE}/auth/steam/login-url`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.openIdUrl) openIdUrl = data.openIdUrl;
+      }
+    } catch (err) {}
+
+    if (!openIdUrl) {
+      const origin = window.location.origin;
+      const returnTo = `${origin}/api/v1/auth/steam/callback`;
+      openIdUrl = `https://steamcommunity.com/openid/login?` + new URLSearchParams({
+        'openid.ns': 'http://specs.openid.net/auth/2.0',
+        'openid.mode': 'checkid_setup',
+        'openid.return_to': returnTo,
+        'openid.realm': origin,
+        'openid.identity': 'http://specs.openid.net/auth/2.0/identifier_select',
+        'openid.claimed_id': 'http://specs.openid.net/auth/2.0/identifier_select'
+      }).toString();
+    }
+
+    // Open popup window in Chrome to prevent Edge protocol hijacking
+    window.open(openIdUrl, 'SteamAuthPopup', 'width=800,height=600,status=no,toolbar=no,menubar=no');
   });
 }
 

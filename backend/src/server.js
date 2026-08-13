@@ -5,7 +5,11 @@ import { db } from './services/db.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-const STEAM_API_KEY = process.env.STEAM_API_KEY || 'B677B149ED047B15E06644583D97A937';
+const STEAM_API_KEY = process.env.STEAM_API_KEY;
+
+if (!STEAM_API_KEY) {
+  console.warn('⚠️ WARNING: STEAM_API_KEY environment variable is missing! Please configure it in your .env file.');
+}
 
 app.use(cors());
 app.use(express.json());
@@ -21,7 +25,7 @@ app.get('/api/v1/health', (req, res) => {
   res.json({ 
     status: 'ok', 
     service: 'StarsCS Backend API', 
-    steamApiConfigured: true, 
+    steamApiConfigured: !!STEAM_API_KEY, 
     timestamp: new Date().toISOString() 
   });
 });
@@ -113,14 +117,29 @@ app.get('/api/v1/auth/steam/login-url', (req, res) => {
   res.json({ success: true, openIdUrl });
 });
 
-// Handle Steam OpenID Redirect Callback (User Provided Verified Logic)
+// Secure Steam OpenID Redirect Callback Handler with check_authentication Verification
 app.get('/api/v1/auth/steam/callback', async (req, res) => {
   const host = req.headers.host || 'stars-shop.uz';
   const protocol = req.headers['x-forwarded-proto'] || (host.includes('localhost') ? 'http' : 'https');
   const frontendOrigin = `${protocol}://${host}`;
 
   try {
-    // 1. Extract 64-bit SteamID from openid.claimed_id URL
+    // 1. Cryptographically verify OpenID response directly with Steam servers
+    const verifyParams = new URLSearchParams(req.query);
+    verifyParams.set('openid.mode', 'check_authentication');
+
+    const verifyRes = await fetch('https://steamcommunity.com/openid/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: verifyParams.toString()
+    });
+
+    const verifyText = await verifyRes.text();
+    if (!verifyText.includes('is_valid:true')) {
+      throw new Error("Steam javobi tasdiqlanmadi — soxta so'rov ehtimoli!");
+    }
+
+    // 2. Extract verified 64-bit SteamID from openid.claimed_id URL
     const claimedId = req.query['openid.claimed_id'];
     let steamId64 = '';
 
@@ -135,36 +154,42 @@ app.get('/api/v1/auth/steam/callback', async (req, res) => {
       throw new Error("SteamID topilmadi yoki OpenID ma'lumotlari noto'g'ri");
     }
 
-    // 2. Fetch real user profile from Steam Web API v2
-    const steamApiUrl = `https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=${STEAM_API_KEY}&steamids=${steamId64}`;
-    const apiResponse = await fetch(steamApiUrl);
-    
-    if (!apiResponse.ok) {
-      throw new Error("Steam API so'rovida xatolik yuz berdi");
+    // 3. Fetch real user profile from Steam Web API v2
+    let displayName = `Player_${steamId64.slice(-4)}`;
+    let avatarUrl = `https://api.dicebear.com/7.x/bottts/svg?seed=${steamId64}`;
+
+    if (STEAM_API_KEY) {
+      const steamApiUrl = `https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=${STEAM_API_KEY}&steamids=${steamId64}`;
+      const apiResponse = await fetch(steamApiUrl);
+      
+      if (apiResponse.ok) {
+        const data = await apiResponse.json();
+        const player = data.response?.players?.[0];
+        if (player) {
+          displayName = player.personaname || displayName;
+          avatarUrl = player.avatarfull || avatarUrl;
+        }
+      }
     }
 
-    const data = await apiResponse.json();
-    const player = data.response?.players?.[0];
-
-    let displayName = player ? player.personaname : `Player_${steamId64.slice(-4)}`;
-    let avatarUrl = player ? player.avatarfull : `https://api.dicebear.com/7.x/bottts/svg?seed=${steamId64}`;
-
-    // Store user session in memory/db
-    db.users[steamId64] = {
+    // 4. Secure Default User Setup (balance: 0, vipRole: 'Oddiy O\'yinchi')
+    const userObj = db.users[steamId64] || {
       steamId: steamId64,
       displayName,
       avatarUrl,
-      profileUrl: player?.profileurl || `https://steamcommunity.com/profiles/${steamId64}`,
-      balance: 50000,
-      vipRole: 'VIP Diamond'
+      profileUrl: `https://steamcommunity.com/profiles/${steamId64}`,
+      balance: 0, // SECURE: Starts with 0 UZS
+      vipRole: "Oddiy O'yinchi" // SECURE: Starts without free VIP
     };
 
-    // 3. Redirect to Frontend with User Query Parameters
-    const redirectUrl = `${frontendOrigin}/?steamAuth=success&steamId=${steamId64}&name=${encodeURIComponent(displayName)}&avatar=${encodeURIComponent(avatarUrl)}`;
+    db.users[steamId64] = userObj;
+
+    // 5. Redirect to Frontend with Verified User Parameters
+    const redirectUrl = `${frontendOrigin}/?steamAuth=success&steamId=${steamId64}&name=${encodeURIComponent(displayName)}&avatar=${encodeURIComponent(avatarUrl)}&balance=${userObj.balance}&vipRole=${encodeURIComponent(userObj.vipRole)}`;
     return res.redirect(redirectUrl);
 
   } catch (error) {
-    console.error("Steam Login Xatoligi:", error.message);
+    console.error("Steam Login Verification Error:", error.message);
     return res.redirect(`${frontendOrigin}/?steamAuth=error&message=${encodeURIComponent(error.message)}`);
   }
 });
@@ -173,6 +198,21 @@ app.get('/api/v1/auth/steam/callback', async (req, res) => {
 app.get('/api/v1/auth/steam/user/:steamId', async (req, res) => {
   try {
     const { steamId } = req.params;
+    const existingUser = db.users[steamId];
+
+    if (!STEAM_API_KEY) {
+      return res.json({
+        success: true,
+        user: existingUser || {
+          steamId,
+          displayName: `Player_${steamId.slice(-4)}`,
+          avatarUrl: `https://api.dicebear.com/7.x/bottts/svg?seed=${steamId}`,
+          balance: 0,
+          vipRole: "Oddiy O'yinchi"
+        }
+      });
+    }
+
     const steamApiUrl = `https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=${STEAM_API_KEY}&steamids=${steamId}`;
     const response = await fetch(steamApiUrl);
     const data = await response.json();
@@ -189,7 +229,8 @@ app.get('/api/v1/auth/steam/user/:steamId', async (req, res) => {
         displayName: player.personaname,
         avatarUrl: player.avatarfull,
         profileUrl: player.profileurl,
-        communityVisibilityState: player.communityvisibilitystate
+        balance: existingUser ? existingUser.balance : 0,
+        vipRole: existingUser ? existingUser.vipRole : "Oddiy O'yinchi"
       }
     });
   } catch (err) {

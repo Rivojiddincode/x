@@ -44,14 +44,16 @@ export default function App() {
       const steamId = urlParams.get('steamId');
       const name = urlParams.get('name');
       const avatar = urlParams.get('avatar');
+      const balance = parseInt(urlParams.get('balance') || '0', 10);
+      const vipRole = urlParams.get('vipRole') || "Oddiy O'yinchi";
       
       const userData = {
-        steamId: steamId || '76561198012345678',
+        steamId,
         displayName: name || 'Steam Player',
         avatarUrl: avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${steamId}`,
         profileUrl: `https://steamcommunity.com/profiles/${steamId}`,
-        balance: 50000,
-        vipRole: 'VIP Diamond'
+        balance: isNaN(balance) ? 0 : balance, // SECURE: Starts with 0 UZS
+        vipRole: vipRole // SECURE: Starts as regular player
       };
 
       setUser(userData);
@@ -135,28 +137,24 @@ export default function App() {
     }
   };
 
-  // Launch Steam OpenID Auth in Microsoft Edge via Protocol URI Handler
-  const handleSteamLogin = () => {
-    const origin = window.location.origin;
-    const returnTo = `${origin}/api/v1/auth/steam/callback`;
-
-    const openIdUrl = `https://steamcommunity.com/openid/login?` + new URLSearchParams({
-      'openid.ns': 'http://specs.openid.net/auth/2.0',
-      'openid.mode': 'checkid_setup',
-      'openid.return_to': returnTo,
-      'openid.realm': origin,
-      'openid.identity': 'http://specs.openid.net/auth/2.0/identifier_select',
-      'openid.claimed_id': 'http://specs.openid.net/auth/2.0/identifier_select'
-    }).toString();
-
-    // Microsoft Edge Protocol URI Handler
-    const edgeUri = `microsoft-edge:${openIdUrl}`;
-    
+  // Secure Steam OpenID Auth Redirect using Backend Login Endpoint
+  const handleSteamLogin = async () => {
     try {
-      window.location.href = edgeUri;
-    } catch (err) {
-      // Standard Fallback Redirect
+      const origin = window.location.origin;
+      const returnTo = `${origin}/api/v1/auth/steam/callback`;
+
+      const openIdUrl = `https://steamcommunity.com/openid/login?` + new URLSearchParams({
+        'openid.ns': 'http://specs.openid.net/auth/2.0',
+        'openid.mode': 'checkid_setup',
+        'openid.return_to': returnTo,
+        'openid.realm': origin,
+        'openid.identity': 'http://specs.openid.net/auth/2.0/identifier_select',
+        'openid.claimed_id': 'http://specs.openid.net/auth/2.0/identifier_select'
+      }).toString();
+
       window.location.href = openIdUrl;
+    } catch (err) {
+      showToastMsg("Steam bilan bog'lanib bo'lmadi");
     }
   };
 
