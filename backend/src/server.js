@@ -1,9 +1,12 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
+import { PrismaClient } from '@prisma/client';
 import { db } from './services/db.js';
 import marketRouter, { registerTradeStateWatcher } from './routes/marketplace.js';
 import { startBot } from './services/steamBot.js';
+
+const prisma = new PrismaClient();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -162,7 +165,6 @@ app.get('/api/v1/auth/steam/callback', async (req, res) => {
     const steamApiUrl = `https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=${STEAM_API_KEY}&steamids=${steamId64}`;
     let displayName = `Player_${steamId64.slice(-4)}`;
     let avatarUrl = `https://api.dicebear.com/7.x/bottts/svg?seed=${steamId64}`;
-    let profileUrl = `https://steamcommunity.com/profiles/${steamId64}`;
 
     try {
       const apiResponse = await fetch(steamApiUrl);
@@ -172,25 +174,27 @@ app.get('/api/v1/auth/steam/callback', async (req, res) => {
         if (player) {
           displayName = player.personaname;
           avatarUrl = player.avatarfull;
-          profileUrl = player.profileurl;
         }
       }
     } catch (e) {
       console.log('Steam API fetch fallback');
     }
 
-    const userRecord = {
-      steamId: steamId64,
-      displayName,
-      avatarUrl,
-      profileUrl,
-      balance: 0,
-      vipRole: "Oddiy O'yinchi",
-      updatedAt: new Date().toISOString()
-    };
-    db.users[steamId64] = userRecord;
+    // Upsert into Prisma DB — creates the user on first login, updates profile fields on repeat logins.
+    // Balance/vipRole are only set on CREATE (never overwritten on repeat logins, so purchases/VIP aren't reset).
+    const userRecord = await prisma.user.upsert({
+      where: { steamId: steamId64 },
+      update: { displayName, avatarUrl },
+      create: {
+        steamId: steamId64,
+        displayName,
+        avatarUrl,
+        balance: 0,
+        vipRole: "Oddiy O'yinchi",
+      },
+    });
 
-    const redirectUrl = `${frontendOrigin}/?steamAuth=success&steamId=${steamId64}&name=${encodeURIComponent(displayName)}&avatar=${encodeURIComponent(avatarUrl)}&balance=${userRecord.balance}&vipRole=${encodeURIComponent(userRecord.vipRole)}`;
+    const redirectUrl = `${frontendOrigin}/?steamAuth=success&steamId=${steamId64}&name=${encodeURIComponent(userRecord.displayName)}&avatar=${encodeURIComponent(userRecord.avatarUrl)}&balance=${userRecord.balance}&vipRole=${encodeURIComponent(userRecord.vipRole)}`;
     return res.redirect(redirectUrl);
 
   } catch (error) {
@@ -204,11 +208,12 @@ app.get('/api/v1/auth/steam/user/:steamId', async (req, res) => {
   try {
     const { steamId } = req.params;
 
-    if (db.users[steamId]) {
+    const existing = await prisma.user.findUnique({ where: { steamId } });
+    if (existing) {
       return res.json({
         success: true,
         source: 'database',
-        user: db.users[steamId]
+        user: existing
       });
     }
 
@@ -217,17 +222,15 @@ app.get('/api/v1/auth/steam/user/:steamId', async (req, res) => {
     const data = await response.json();
 
     const player = data.response?.players?.[0];
-    const userRecord = {
-      steamId,
-      displayName: player ? player.personaname : `Player_${steamId.slice(-4)}`,
-      avatarUrl: player ? player.avatarfull : `https://api.dicebear.com/7.x/bottts/svg?seed=${steamId}`,
-      profileUrl: player ? player.profileurl : `https://steamcommunity.com/profiles/${steamId}`,
-      balance: 0,
-      vipRole: "Oddiy O'yinchi",
-      createdAt: new Date().toISOString()
-    };
-
-    db.users[steamId] = userRecord;
+    const userRecord = await prisma.user.create({
+      data: {
+        steamId,
+        displayName: player ? player.personaname : `Player_${steamId.slice(-4)}`,
+        avatarUrl: player ? player.avatarfull : `https://api.dicebear.com/7.x/bottts/svg?seed=${steamId}`,
+        balance: 0,
+        vipRole: "Oddiy O'yinchi",
+      },
+    });
 
     res.json({
       success: true,
@@ -240,31 +243,38 @@ app.get('/api/v1/auth/steam/user/:steamId', async (req, res) => {
 });
 
 // Save or Update User Profile directly in Database
-app.post('/api/v1/auth/steam/sync', (req, res) => {
+app.post('/api/v1/auth/steam/sync', async (req, res) => {
   const { steamId, displayName, avatarUrl, balance, vipRole } = req.body;
   if (!steamId) {
     return res.status(400).json({ success: false, message: 'Steam ID kiritilmadi' });
   }
 
-  const existing = db.users[steamId] || {};
-  const userRecord = {
-    ...existing,
-    steamId,
-    displayName: displayName || existing.displayName || `Player_${steamId.slice(-4)}`,
-    avatarUrl: avatarUrl || existing.avatarUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=${steamId}`,
-    profileUrl: `https://steamcommunity.com/profiles/${steamId}`,
-    balance: balance !== undefined ? balance : (existing.balance ?? 0),
-    vipRole: vipRole || existing.vipRole || "Oddiy O'yinchi",
-    updatedAt: new Date().toISOString()
-  };
+  try {
+    const userRecord = await prisma.user.upsert({
+      where: { steamId },
+      update: {
+        ...(displayName && { displayName }),
+        ...(avatarUrl && { avatarUrl }),
+        ...(balance !== undefined && { balance }),
+        ...(vipRole && { vipRole }),
+      },
+      create: {
+        steamId,
+        displayName: displayName || `Player_${steamId.slice(-4)}`,
+        avatarUrl: avatarUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=${steamId}`,
+        balance: balance ?? 0,
+        vipRole: vipRole || "Oddiy O'yinchi",
+      },
+    });
 
-  db.users[steamId] = userRecord;
-
-  res.json({
-    success: true,
-    message: "Foydalanuvchi ma'lumotlar bazasiga saqlandi",
-    user: userRecord
-  });
+    res.json({
+      success: true,
+      message: "Foydalanuvchi ma'lumotlar bazasiga saqlandi",
+      user: userRecord
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
 });
 
 app.listen(PORT, () => {
