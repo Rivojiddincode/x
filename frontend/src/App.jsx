@@ -93,7 +93,7 @@ export default function App() {
     fetchStore();
     fetchLeaderboard();
     fetchBans();
-  }, [serverFilter]);
+  }, []);
 
   const showToastMsg = (msg) => {
     setToast(msg);
@@ -110,7 +110,9 @@ export default function App() {
 
   const fetchServers = async () => {
     try {
-      const data = await apiClient.getServers(serverFilter);
+      // Always fetch the full list — filtering by mode now happens client-side
+      // (GameModeGrid needs to see every mode at once to render its tiles/counts).
+      const data = await apiClient.getServers('all');
       if (data.success) {
         setServers(data.servers);
         setTotalOnline(data.totalOnline);

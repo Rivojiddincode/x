@@ -1,5 +1,6 @@
 import React from 'react';
 import { Play, Copy, Wifi } from 'lucide-react';
+import { GameModeGrid } from './GameModeGrid';
 
 export function ServerCard({ srv, onToast }) {
   const percent = Math.min(100, Math.round((srv.onlinePlayers / srv.maxPlayers) * 100));
@@ -42,20 +43,14 @@ export function ServerCard({ srv, onToast }) {
 }
 
 export function ServerList({ servers, serverFilter, setServerFilter, onToast }) {
-  const filters = ['all', '5x5', 'RETAKE', 'DUELS', 'DM', 'AWP', 'MINIGAME', 'BHOP & KZ', 'SURF', 'MODELLAR'];
+  const filtered = serverFilter === 'all' ? servers : servers.filter(s => s.mode === serverFilter);
 
   return (
     <div>
-      <div className="filter-bar">
-        {filters.map(f => (
-          <button key={f} className={`filter-btn ${serverFilter === f ? 'active' : ''}`} onClick={() => setServerFilter(f)}>
-            {f.toUpperCase()}
-          </button>
-        ))}
-      </div>
+      <GameModeGrid servers={servers} serverFilter={serverFilter} setServerFilter={setServerFilter} />
 
       <div className="grid">
-        {servers.map(srv => (
+        {filtered.map(srv => (
           <ServerCard key={srv.id} srv={srv} onToast={onToast} />
         ))}
       </div>
