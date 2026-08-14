@@ -11,9 +11,9 @@ export function SkinMarketView({ user, onToast }) {
   const [loadingInventory, setLoadingInventory] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [listPrice, setListPrice] = useState('');
-  const [suggestedPrice, setSuggestedPrice] = useState(null);
-  const [loadingSuggestedPrice, setLoadingSuggestedPrice] = useState(false);
   const [creatingListing, setCreatingListing] = useState(false);
+  const [suggestedPrice, setSuggestedPrice] = useState(null);
+  const [loadingPrice, setLoadingPrice] = useState(false);
 
   const [listings, setListings] = useState([]);
   const [loadingListings, setLoadingListings] = useState(true);
@@ -22,25 +22,6 @@ export function SkinMarketView({ user, onToast }) {
   useEffect(() => {
     fetchListings();
   }, []);
-
-  useEffect(() => {
-    if (!selectedItem) {
-      setSuggestedPrice(null);
-      return;
-    }
-    setLoadingSuggestedPrice(true);
-    setSuggestedPrice(null);
-    fetch(`${API_BASE}/market/market-price?marketHashName=${encodeURIComponent(selectedItem.marketHashName)}`)
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success && data.price) {
-          setSuggestedPrice(data.price);
-          setListPrice(String(data.price));
-        }
-      })
-      .catch(() => {})
-      .finally(() => setLoadingSuggestedPrice(false));
-  }, [selectedItem]);
 
   const fetchListings = async () => {
     setLoadingListings(true);
@@ -100,6 +81,25 @@ export function SkinMarketView({ user, onToast }) {
     }
   };
 
+  const selectItem = async (item) => {
+    setSelectedItem(item);
+    setListPrice('');
+    setSuggestedPrice(null);
+    setLoadingPrice(true);
+    try {
+      const res = await fetch(`${API_BASE}/market/market-price?marketHashName=${encodeURIComponent(item.marketHashName)}`);
+      const data = await res.json();
+      if (data.success && data.price) {
+        setSuggestedPrice(data.price);
+        setListPrice(data.price.toFixed(2)); // avtomatik to'ldirish — foydalanuvchi xohlasa o'zgartiradi
+      }
+    } catch (e) {
+      // narx topilmasa ham, foydalanuvchi qo'lda kirita oladi — xatoni yashirin qoldiramiz
+    } finally {
+      setLoadingPrice(false);
+    }
+  };
+
   const createListing = async () => {
     if (!selectedItem) return;
     const price = Number(listPrice);
@@ -126,7 +126,6 @@ export function SkinMarketView({ user, onToast }) {
         onToast?.('Item sotuvga qo\'yildi!');
         setSelectedItem(null);
         setListPrice('');
-        setSuggestedPrice(null);
         setInventory((prev) => prev.filter((i) => i.assetId !== selectedItem.assetId));
         fetchListings();
       } else {
@@ -196,11 +195,11 @@ export function SkinMarketView({ user, onToast }) {
           loadingInventory={loadingInventory}
           onLoadInventory={loadInventory}
           selectedItem={selectedItem}
-          setSelectedItem={setSelectedItem}
+          onSelectItem={selectItem}
           listPrice={listPrice}
           setListPrice={setListPrice}
           suggestedPrice={suggestedPrice}
-          loadingSuggestedPrice={loadingSuggestedPrice}
+          loadingPrice={loadingPrice}
           onCreateListing={createListing}
           creatingListing={creatingListing}
         />
@@ -263,8 +262,8 @@ function ShopTab({ listings, loading, onBuy, buyingId, onRefresh }) {
 function SellTab({
   user, tradeUrl, setTradeUrl, savingTradeUrl, onSaveTradeUrl,
   inventory, loadingInventory, onLoadInventory,
-  selectedItem, setSelectedItem, listPrice, setListPrice,
-  suggestedPrice, loadingSuggestedPrice,
+  selectedItem, onSelectItem, listPrice, setListPrice,
+  suggestedPrice, loadingPrice,
   onCreateListing, creatingListing,
 }) {
   if (!user) {
@@ -328,7 +327,7 @@ function SellTab({
                   borderColor: selectedItem?.assetId === item.assetId ? 'var(--money)' : 'var(--card-border)',
                   padding: '12px',
                 }}
-                onClick={() => setSelectedItem(item)}
+                onClick={() => onSelectItem(item)}
               >
                 <div style={{ height: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.25)', borderRadius: '8px', marginBottom: '8px' }}>
                   {item.iconUrl ? <img src={item.iconUrl} alt={item.marketHashName} style={{ maxHeight: '90%', maxWidth: '90%' }} /> : <Tag size={24} color="var(--text-muted)" />}
@@ -345,20 +344,20 @@ function SellTab({
         <div className="card">
           <h3 className="card-title" style={{ fontSize: '15px' }}>Sotuvga qo'yish: {selectedItem.marketHashName}</h3>
 
-          {/* Steam Market Suggested Price Notice */}
-          <div style={{ marginTop: '8px', fontSize: '12px', color: 'var(--text-muted)' }}>
-            {loadingSuggestedPrice ? (
-              <span>Steam Market narxi tekshirilmoqda...</span>
+          <div style={{ margin: '10px 0 4px', fontSize: '12px', color: 'var(--text-muted)' }}>
+            {loadingPrice ? (
+              'Steam Market\'dan hozirgi narx tekshirilmoqda...'
             ) : suggestedPrice ? (
-              <span style={{ color: 'var(--green)' }}>
-                Steam Market'dagi hozirgi narx: <strong>${suggestedPrice.toFixed(2)}</strong> (Forma avtomatik to'ldirildi, min $0.5)
+              <span>
+                Steam Market'dagi hozirgi narx: <b style={{ color: 'var(--money)' }}>${suggestedPrice.toFixed(2)}</b>
+                {' '}— narx maydoni shunga qarab avtomatik to'ldirildi, xohlasangiz o'zgartiring.
               </span>
             ) : (
-              <span>Steam Market narxi topilmadi. O'zingiz narx belgilang (min $0.5).</span>
+              'Bu item uchun Steam Market narxi topilmadi — narxni qo\'lda kiriting.'
             )}
           </div>
 
-          <div style={{ display: 'flex', gap: '10px', marginTop: '12px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: '10px', marginTop: '8px', flexWrap: 'wrap' }}>
             <input
               type="number"
               min="0.5"
@@ -372,6 +371,9 @@ function SellTab({
               {creatingListing ? 'Joylanmoqda...' : 'Sotuvga qo\'yish'}
             </button>
           </div>
+          <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px' }}>
+            Minimal sotuv narxi: $0.5. Undan past narx serverda rad etiladi.
+          </p>
         </div>
       )}
     </div>
