@@ -11,6 +11,8 @@ export function SkinMarketView({ user, onToast }) {
   const [loadingInventory, setLoadingInventory] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [listPrice, setListPrice] = useState('');
+  const [suggestedPrice, setSuggestedPrice] = useState(null);
+  const [loadingSuggestedPrice, setLoadingSuggestedPrice] = useState(false);
   const [creatingListing, setCreatingListing] = useState(false);
 
   const [listings, setListings] = useState([]);
@@ -20,6 +22,25 @@ export function SkinMarketView({ user, onToast }) {
   useEffect(() => {
     fetchListings();
   }, []);
+
+  useEffect(() => {
+    if (!selectedItem) {
+      setSuggestedPrice(null);
+      return;
+    }
+    setLoadingSuggestedPrice(true);
+    setSuggestedPrice(null);
+    fetch(`${API_BASE}/market/market-price?marketHashName=${encodeURIComponent(selectedItem.marketHashName)}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && data.price) {
+          setSuggestedPrice(data.price);
+          setListPrice(String(data.price));
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoadingSuggestedPrice(false));
+  }, [selectedItem]);
 
   const fetchListings = async () => {
     setLoadingListings(true);
@@ -105,6 +126,7 @@ export function SkinMarketView({ user, onToast }) {
         onToast?.('Item sotuvga qo\'yildi!');
         setSelectedItem(null);
         setListPrice('');
+        setSuggestedPrice(null);
         setInventory((prev) => prev.filter((i) => i.assetId !== selectedItem.assetId));
         fetchListings();
       } else {
@@ -177,6 +199,8 @@ export function SkinMarketView({ user, onToast }) {
           setSelectedItem={setSelectedItem}
           listPrice={listPrice}
           setListPrice={setListPrice}
+          suggestedPrice={suggestedPrice}
+          loadingSuggestedPrice={loadingSuggestedPrice}
           onCreateListing={createListing}
           creatingListing={creatingListing}
         />
@@ -240,6 +264,7 @@ function SellTab({
   user, tradeUrl, setTradeUrl, savingTradeUrl, onSaveTradeUrl,
   inventory, loadingInventory, onLoadInventory,
   selectedItem, setSelectedItem, listPrice, setListPrice,
+  suggestedPrice, loadingSuggestedPrice,
   onCreateListing, creatingListing,
 }) {
   if (!user) {
@@ -319,6 +344,20 @@ function SellTab({
       {selectedItem && (
         <div className="card">
           <h3 className="card-title" style={{ fontSize: '15px' }}>Sotuvga qo'yish: {selectedItem.marketHashName}</h3>
+
+          {/* Steam Market Suggested Price Notice */}
+          <div style={{ marginTop: '8px', fontSize: '12px', color: 'var(--text-muted)' }}>
+            {loadingSuggestedPrice ? (
+              <span>Steam Market narxi tekshirilmoqda...</span>
+            ) : suggestedPrice ? (
+              <span style={{ color: 'var(--green)' }}>
+                Steam Market'dagi hozirgi narx: <strong>${suggestedPrice.toFixed(2)}</strong> (Forma avtomatik to'ldirildi, min $0.5)
+              </span>
+            ) : (
+              <span>Steam Market narxi topilmadi. O'zingiz narx belgilang (min $0.5).</span>
+            )}
+          </div>
+
           <div style={{ display: 'flex', gap: '10px', marginTop: '12px', flexWrap: 'wrap' }}>
             <input
               type="number"

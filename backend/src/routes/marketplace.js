@@ -3,7 +3,7 @@
 
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
-import { fetchInventory, parseTradeUrl, isTradeUrlOwnedBySteamId } from '../services/inventory.js';
+import { fetchInventory, parseTradeUrl, isTradeUrlOwnedBySteamId, fetchMarketPrice } from '../services/inventory.js';
 import { requestItemFromSeller, sendItemToBuyer, onOfferStateChanged, isBotReady } from '../services/steamBot.js';
 
 const prisma = new PrismaClient();
@@ -47,6 +47,23 @@ router.post('/trade-url', async (req, res) => {
   }
 
   res.json({ success: true, user });
+});
+
+// ---------------------------------------------------------
+// 1b. Steam Market'dagi hozirgi narxini olish (tavsiya uchun)
+// ---------------------------------------------------------
+router.get('/market-price', async (req, res) => {
+  const { marketHashName } = req.query;
+  if (!marketHashName) {
+    return res.status(400).json({ success: false, message: 'marketHashName talab qilinadi' });
+  }
+
+  try {
+    const price = await fetchMarketPrice(marketHashName);
+    res.json({ success: true, price });
+  } catch (err) {
+    res.json({ success: false, price: null, message: err.message });
+  }
 });
 
 // ---------------------------------------------------------

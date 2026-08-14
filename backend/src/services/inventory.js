@@ -80,3 +80,35 @@ export function isTradeUrlOwnedBySteamId(tradeUrl, steamId64) {
   if (!parsed) return false;
   return parsed.partner === steamId64ToAccountId(steamId64);
 }
+
+// Steam narxlarini juda tez-tez so'rasa, Steam so'rovlarni bloklaydi —
+// shuning uchun har bir item narxini 10 daqiqaga keshda saqlaymiz.
+const priceCache = new Map(); // marketHashName -> { price, fetchedAt }
+const PRICE_CACHE_TTL_MS = 10 * 60 * 1000;
+
+/**
+ * Steam Community Market'dan berilgan item uchun hozirgi (eng past sotuv) narxini oladi.
+ * currency=1 => USD.
+ */
+export async function fetchMarketPrice(marketHashName) {
+  const cached = priceCache.get(marketHashName);
+  if (cached && Date.now() - cached.fetchedAt < PRICE_CACHE_TTL_MS) {
+    return cached.price;
+  }
+
+  const url = `https://steamcommunity.com/market/priceoverview/?appid=730&currency=1&market_hash_name=${encodeURIComponent(marketHashName)}`;
+  const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (StarsCS Price Fetcher)' } });
+
+  if (!res.ok) {
+    priceCache.set(marketHashName, { price: null, fetchedAt: Date.now() });
+    return null;
+  }
+
+  const data = await res.json();
+  // lowest_price masalan "$12.34" ko'rinishida keladi — raqamga o'giramiz
+  const raw = data.lowest_price || data.median_price;
+  const numeric = raw ? Number(String(raw).replace(/[^0-9.]/g, '')) : null;
+
+  priceCache.set(marketHashName, { price: numeric, fetchedAt: Date.now() });
+  return numeric;
+}
