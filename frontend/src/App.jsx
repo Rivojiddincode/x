@@ -206,7 +206,7 @@ export default function App() {
       />
 
       {/* Hero Section - ONLY rendered on the main servers page */}
-      {activeTab === 'servers' && <Hero totalOnline={totalOnline} />}
+      {activeTab === 'servers' && <Hero totalOnline={totalOnline} serverCount={servers.length} />}
 
       {/* Main View Components */}
       <main className="main container" style={{ marginTop: activeTab !== 'servers' ? '32px' : '0' }}>
