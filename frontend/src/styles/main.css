@@ -445,6 +445,105 @@ body {
   .stat-val { font-size: 21px; }
 }
 
+/* VIP Store cards */
+.vip-card {
+  position: relative;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius);
+  padding: 26px 24px 24px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: transform .18s ease, box-shadow .18s ease;
+}
+.vip-card:hover { transform: translateY(-4px); }
+
+.vip-card-bar {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+}
+
+.vip-badge {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #fff;
+  font-family: var(--font-heading);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+.vip-icon-badge {
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 14px;
+}
+
+.vip-name {
+  font-family: var(--font-heading);
+  font-size: 19px;
+  font-weight: 800;
+  margin-bottom: 6px;
+}
+
+.vip-price {
+  font-family: var(--font-heading);
+  font-size: 26px;
+  font-weight: 900;
+  color: var(--money);
+  margin-bottom: 16px;
+}
+.vip-price-currency { font-size: 15px; }
+.vip-price-period { font-size: 12px; font-weight: 500; color: var(--text-muted); }
+
+.vip-feature-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 0;
+  margin: 0 0 22px;
+  flex: 1;
+}
+.vip-feature-list li {
+  font-size: 13px;
+  color: #cbd5e1;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  line-height: 1.4;
+}
+
+.vip-buy-btn {
+  border: none;
+  border-radius: 10px;
+  padding: 13px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: 14px;
+  color: #0b0d14;
+  cursor: pointer;
+  transition: filter .15s ease, transform .15s ease;
+}
+.vip-buy-btn:hover { filter: brightness(1.08); transform: translateY(-1px); }
+
 /* Main Grid & Cards */
 .main { padding: 36px 20px 80px; }
 .filter-bar { display: flex; gap: 8px; margin-bottom: 24px; flex-wrap: wrap; }

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Check, ShoppingCart, Star } from 'lucide-react';
+import { Check, ShoppingCart, Star, Medal, Crown, Gem, Eye, Lock, Sparkles } from 'lucide-react';
 
 const FALLBACK_STORE_ITEMS = [
   { id: "vip-silver", name: "VIP Silver", price: 35000, period: "oyiga", popular: false, color: "#a0aec0", features: ["Barcha serverlarga kirish ustunligi (Reserved Slot)", "Maxsus VIP Chat tegi `[VIP Silver]`", "O'yin boshida +105 HP va qo'shimcha zirh", "Skinchanger uchun bazaviy ruxsat"] },
@@ -10,16 +10,25 @@ const FALLBACK_STORE_ITEMS = [
   { id: "skin-pass", name: "Premium Skin Pass", price: 45000, period: "oyiga", popular: false, color: "#e2e8f0", features: ["CS2 ning eng so'nggi va qimmatbaho pichoqlari (Karambit, Butterfly)", "StatTrak™ hisoblagichi bilan barcha qurollar"] }
 ];
 
+const TIER_ICONS = {
+  "vip-silver": Medal,
+  "vip-gold": Crown,
+  "vip-diamond": Gem,
+  "custom-fov": Eye,
+  "reserved-slot": Lock,
+  "skin-pass": Sparkles,
+};
+
 export function StoreView({ storeItems = [], onBuy }) {
   const itemsToDisplay = (storeItems && storeItems.length > 0) ? storeItems : FALLBACK_STORE_ITEMS;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       <div style={{ textAlign: 'center', marginBottom: '8px' }}>
-        <h2 style={{ fontSize: '26px', fontWeight: '800', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-          <Star color="var(--primary)" size={24} /> CS2 VIP & Imtiyozlar Do'koni
+        <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '28px', fontWeight: '800', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
+          <Star color="var(--money)" size={24} fill="var(--money)" /> CS2 VIP & Imtiyozlar Do'koni
         </h2>
-        <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginTop: '4px' }}>
+        <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginTop: '6px' }}>
           Serverlarimizda VIP maqom va ustunliklarga ega bo'lish uchun tarif tanlang
         </p>
       </div>
@@ -32,28 +41,53 @@ export function StoreView({ storeItems = [], onBuy }) {
               ? item.features.split(',').map(s => s.trim())
               : [];
 
+          const Icon = TIER_ICONS[item.id] || Star;
+          const accent = item.color || 'var(--span)';
+
           return (
-            <div key={item.id} className="card" style={{ borderColor: item.popular ? 'var(--primary)' : 'var(--card-border)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-              <div>
-                {item.popular && (
-                  <div style={{ background: 'var(--primary)', color: '#fff', fontSize: '10px', fontWeight: '900', padding: '2px 8px', borderRadius: '4px', display: 'inline-block', marginBottom: '8px' }}>
-                    ENG MASHHUR
-                  </div>
-                )}
-                <h3 className="card-title" style={{ color: item.color || '#fff' }}>{item.name}</h3>
-                <div style={{ fontSize: '26px', fontWeight: '900', color: 'var(--money)', margin: '12px 0' }}>
-                  {Number(item.price).toLocaleString()} UZS <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>/ {item.period || 'oyiga'}</span>
+            <div
+              key={item.id}
+              className="vip-card"
+              style={{
+                '--accent': accent,
+                borderColor: item.popular ? accent : 'var(--card-border)',
+                boxShadow: item.popular ? `0 0 0 1px ${accent}55, 0 20px 44px -18px ${accent}66` : undefined,
+              }}
+            >
+              {/* Top accent bar */}
+              <div className="vip-card-bar" style={{ background: `linear-gradient(90deg, ${accent}, transparent)` }} />
+
+              {item.popular && (
+                <div className="vip-badge" style={{ background: accent }}>
+                  <Star size={11} fill="#fff" /> ENG MASHHUR
                 </div>
-                <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '8px', padding: 0 }}>
-                  {featuresList.map((f, i) => (
-                    <li key={i} style={{ fontSize: '13px', color: '#ccc', display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
-                      <Check size={14} color="var(--green)" style={{ flexShrink: 0, marginTop: '2px' }} />
-                      <span>{f}</span>
-                    </li>
-                  ))}
-                </ul>
+              )}
+
+              <div className="vip-icon-badge" style={{ background: `${accent}1f`, color: accent, boxShadow: `0 0 24px ${accent}33` }}>
+                <Icon size={22} />
               </div>
-              <button className="btn btn-wallet" style={{ marginTop: '20px', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }} onClick={() => onBuy(item.price)}>
+
+              <h3 className="vip-name" style={{ color: item.popular ? accent : '#fff' }}>{item.name}</h3>
+
+              <div className="vip-price">
+                {Number(item.price).toLocaleString()} <span className="vip-price-currency">UZS</span>
+                <span className="vip-price-period"> / {item.period || 'oyiga'}</span>
+              </div>
+
+              <ul className="vip-feature-list">
+                {featuresList.map((f, i) => (
+                  <li key={i}>
+                    <Check size={14} color={accent} style={{ flexShrink: 0, marginTop: '2px' }} />
+                    <span>{f}</span>
+                  </li>
+                ))}
+              </ul>
+
+              <button
+                className="vip-buy-btn"
+                style={{ background: `linear-gradient(135deg, ${accent}, ${accent}cc)`, boxShadow: `0 8px 20px -6px ${accent}88` }}
+                onClick={() => onBuy(item.price)}
+              >
                 <ShoppingCart size={16} /> Xarid qilish
               </button>
             </div>
