@@ -50,23 +50,6 @@ router.post('/trade-url', async (req, res) => {
 });
 
 // ---------------------------------------------------------
-// 1b. Steam Market'dagi hozirgi narxini olish (tavsiya uchun)
-// ---------------------------------------------------------
-router.get('/market-price', async (req, res) => {
-  const { marketHashName } = req.query;
-  if (!marketHashName) {
-    return res.status(400).json({ success: false, message: 'marketHashName talab qilinadi' });
-  }
-
-  try {
-    const price = await fetchMarketPrice(marketHashName);
-    res.json({ success: true, price });
-  } catch (err) {
-    res.json({ success: false, price: null, message: err.message });
-  }
-});
-
-// ---------------------------------------------------------
 // 2. Foydalanuvchining Steam inventarini ko'rsatish (sotuvga qo'yish uchun)
 // ---------------------------------------------------------
 router.get('/inventory/:steamId', async (req, res) => {
@@ -75,6 +58,25 @@ router.get('/inventory/:steamId', async (req, res) => {
     res.json({ success: true, items });
   } catch (err) {
     res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+// ---------------------------------------------------------
+// 2b. Berilgan item uchun hozirgi Steam Market narxini tavsiya qilish
+// ---------------------------------------------------------
+router.get('/market-price', async (req, res) => {
+  const { marketHashName } = req.query;
+  if (!marketHashName) {
+    return res.status(400).json({ success: false, message: 'marketHashName talab qilinadi' });
+  }
+  try {
+    const price = await fetchMarketPrice(marketHashName);
+    if (price === null) {
+      return res.json({ success: true, price: null, message: 'Steam narx bermadi (yangi/kam savdo qilinadigan item bo\'lishi mumkin)' });
+    }
+    res.json({ success: true, price });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
 });
 
