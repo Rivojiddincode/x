@@ -90,7 +90,7 @@ model SkinListing {
   marketHashName String
   iconUrl        String
   price          Float    // in USD, minimum 0.5 enforced at the API layer
-  status         String   @default("ACTIVE") // ACTIVE | PENDING | SOLD | CANCELLED
+  status         String   @default("ACTIVE") // ACTIVE | PENDING | SOLD | CANCELLED | BOT_STOCK (instant-sell orqali botga o'tgan)
   createdAt      DateTime @default(now())
   transaction    SkinTransaction?
 }
@@ -105,10 +105,12 @@ model SkinTransaction {
   seller                  User     @relation("SellerTransactions", fields: [sellerId], references: [id])
   price                   Float
   // AWAITING_SELLER_TRADE -> BOT_HOLDING_ITEM -> AWAITING_BUYER_TRADE -> COMPLETED
-  // (or -> FAILED / CANCELLED at any stage)
+  // (yoki ESCROW_SELLER / ESCROW_BUYER -> Steam escrow tugagach davom etadi)
+  // (yoki -> FAILED / CANCELLED istalgan bosqichda)
   status                  String   @default("AWAITING_SELLER_TRADE")
   botToSellerTradeOfferId String?
   botToBuyerTradeOfferId  String?
+  escrowEndsAt            DateTime?
   failReason              String?
   createdAt               DateTime @default(now())
   updatedAt               DateTime @updatedAt

@@ -140,7 +140,7 @@ export function sendItemToBuyer({ buyerTradeUrl, assetId }) {
  */
 export function onOfferStateChanged(handler) {
   manager.on('sentOfferChanged', (offer, oldState) => {
-    handler({ offerId: offer.id, newState: offer.state, oldState });
+    handler({ offerId: offer.id, newState: offer.state, oldState, escrowEnds: offer.escrowEnds || null });
   });
 }
 
