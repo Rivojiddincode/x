@@ -156,8 +156,9 @@ router.post('/instant-sell', async (req, res) => {
 
   const instantPrice = Math.max(MIN_PRICE, Number((marketPrice * INSTANT_SELL_RATE).toFixed(2)));
 
-  // Item "PENDING" sifatida yaratiladi. Sotuvchi trade'ni tasdiqlagach,
-  // status BOT_STOCK ga o'tadi va balans darhol to'ldiriladi.
+  // Item "SOLD" (yopiq) sifatida yaratiladi — chunki bu boshqa xaridorni kutmaydi,
+  // saytning o'zi (bot zaxirasi) uchun sotib olinadi. Keyinroq admin bu itemni botning
+  // o'z inventaridan qayta, to'liq narxda oddiy listing sifatida sotuvga qo'yishi mumkin.
   const listing = await prisma.skinListing.create({
     data: {
       sellerId: seller.id,
@@ -179,7 +180,7 @@ router.post('/instant-sell', async (req, res) => {
 
   try {
     const { offerId } = await requestItemFromSeller({ sellerTradeUrl: seller.tradeUrl, assetId });
-    await prisma.skinTransaction.update({ where: { id: tx.id }, data: { botToSellerTradeOfferId: String(offerId) } });
+    await prisma.skinTransaction.update({ where: { id: tx.id }, data: { botToSellerTradeOfferId: offerId } });
 
     res.json({
       success: true,
@@ -272,13 +273,45 @@ router.post('/listings/:id/buy', async (req, res) => {
 // 6. Bot trade holatini kuzatish — asosiy escrow avtomatikasi
 // ---------------------------------------------------------
 export function registerTradeStateWatcher() {
-  onOfferStateChanged(async ({ offerId, newState }) => {
+  onOfferStateChanged(async ({ offerId, newState, escrowEnds }) => {
     const ACCEPTED = 3;
+    const IN_ESCROW = 11; // TradeOfferManager.ETradeOfferState.InEscrow
+
+    // Steam ba'zan trade'ni to'g'ridan-to'g'ri "Accepted" qilmasdan, "InEscrow" holatiga
+    // o'tkazadi — bu ikkala tomonning ham Mobile Authenticator 7 kunlik shartini
+    // bajarmagani sababli bo'ladi (bizning bot tarafida emas). Buni jim qoldirish o'rniga,
+    // aniq status va kutish muddatini saqlaymiz, shunda foydalanuvchi nima bo'layotganini biladi.
+    if (newState === IN_ESCROW) {
+      const sellerTxEscrow = await prisma.skinTransaction.findFirst({
+        where: { botToSellerTradeOfferId: String(offerId), status: 'AWAITING_SELLER_TRADE' },
+      });
+      if (sellerTxEscrow) {
+        await prisma.skinTransaction.update({
+          where: { id: sellerTxEscrow.id },
+          data: { status: 'ESCROW_SELLER', escrowEndsAt: escrowEnds },
+        });
+        return;
+      }
+      const buyerTxEscrow = await prisma.skinTransaction.findFirst({
+        where: { botToBuyerTradeOfferId: String(offerId), status: 'AWAITING_BUYER_TRADE' },
+      });
+      if (buyerTxEscrow) {
+        await prisma.skinTransaction.update({
+          where: { id: buyerTxEscrow.id },
+          data: { status: 'ESCROW_BUYER', escrowEndsAt: escrowEnds },
+        });
+      }
+      return;
+    }
+
     if (newState !== ACCEPTED) return;
 
     // Bu offer sotuvchidan bot tomon edimi?
     const sellerTx = await prisma.skinTransaction.findFirst({
-      where: { botToSellerTradeOfferId: String(offerId), status: 'AWAITING_SELLER_TRADE' },
+      where: {
+        botToSellerTradeOfferId: String(offerId),
+        status: { in: ['AWAITING_SELLER_TRADE', 'ESCROW_SELLER'] }, // escrow tugab, endi accepted bo'lgan holatni ham qamraydi
+      },
       include: { listing: true, buyer: true, seller: true },
     });
 
@@ -310,17 +343,29 @@ export function registerTradeStateWatcher() {
           data: { status: 'AWAITING_BUYER_TRADE', botToBuyerTradeOfferId: String(buyerOfferId) },
         });
       } catch (err) {
-        await prisma.skinTransaction.update({
-          where: { id: sellerTx.id },
-          data: { status: 'FAILED', failReason: 'Xaridorga jo\'natishda xato: ' + err.message },
-        });
+        // Xaridorga jo'natib bo'lmadi — item HALI HAM bot inventarida turibdi (yo'qolmagan!),
+        // lekin Botirning puli allaqachon "hold" qilingan edi. Buni qaytarib berish shart,
+        // aks holda pul yo'qolib qoladi. Item admin tomonidan qo'lda ko'rib chiqilishi kerak
+        // ('NEEDS_ADMIN_REVIEW' — bot inventarida "qolib ketgan" item, deyarli har doim
+        // xaridorning o'z akkaunt cheklovi tufayli sodir bo'ladi, masalan trade-restricted holat).
+        await prisma.$transaction([
+          prisma.skinTransaction.update({
+            where: { id: sellerTx.id },
+            data: { status: 'NEEDS_ADMIN_REVIEW', failReason: 'Xaridorga jo\'natib bo\'lmadi: ' + err.message },
+          }),
+          prisma.user.update({ where: { id: sellerTx.buyerId }, data: { balance: { increment: sellerTx.price } } }),
+        ]);
+        console.error(`[market] Bitim #${sellerTx.id}: item bot inventarida qoldi, xaridorga pul qaytarildi. Admin tekshiruvi kerak.`);
       }
       return;
     }
 
     // Bu offer bot -> xaridor edimi?
     const buyerTx = await prisma.skinTransaction.findFirst({
-      where: { botToBuyerTradeOfferId: String(offerId), status: 'AWAITING_BUYER_TRADE' },
+      where: {
+        botToBuyerTradeOfferId: String(offerId),
+        status: { in: ['AWAITING_BUYER_TRADE', 'ESCROW_BUYER'] },
+      },
       include: { listing: true },
     });
 
@@ -334,5 +379,36 @@ export function registerTradeStateWatcher() {
     }
   });
 }
+
+// ---------------------------------------------------------
+// 7. Bitim holatini tekshirish (frontend shu orqali "escrow'da" holatini ko'rsatadi)
+// ---------------------------------------------------------
+router.get('/transactions/:id', async (req, res) => {
+  const tx = await prisma.skinTransaction.findUnique({
+    where: { id: Number(req.params.id) },
+    include: { listing: true },
+  }).catch(() => null);
+
+  if (!tx) return res.status(404).json({ success: false, message: 'Bitim topilmadi' });
+
+  const STATUS_MESSAGES = {
+    AWAITING_SELLER_TRADE: 'Sotuvchi tasdiqlashini kutmoqda',
+    ESCROW_SELLER: 'Sotuvchi tasdiqladi, lekin Steam escrow\'ga qo\'ydi (akkauntida Mobile Authenticator 7 kundan kam faol)',
+    BOT_HOLDING_ITEM: 'Item botda, xaridorga jo\'natilmoqda',
+    AWAITING_BUYER_TRADE: 'Xaridor tasdiqlashini kutmoqda',
+    ESCROW_BUYER: 'Xaridor tasdiqladi, lekin Steam escrow\'ga qo\'ydi (akkauntida Mobile Authenticator 7 kundan kam faol)',
+    COMPLETED: 'Bitim yakunlandi',
+    FAILED: 'Bitim muvaffaqiyatsiz tugadi',
+    NEEDS_ADMIN_REVIEW: 'Xaridorga jo\'natib bo\'lmadi (pulingiz qaytarildi). Bu odatda xaridor akkauntining trade cheklovi tufayli sodir bo\'ladi.',
+  };
+
+  res.json({
+    success: true,
+    status: tx.status,
+    message: STATUS_MESSAGES[tx.status] || tx.status,
+    escrowEndsAt: tx.escrowEndsAt,
+    failReason: tx.failReason,
+  });
+});
 
 export default router;

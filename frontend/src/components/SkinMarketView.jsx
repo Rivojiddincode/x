@@ -171,6 +171,38 @@ export function SkinMarketView({ user, onToast }) {
     }
   };
 
+  const pollTransactionStatus = (transactionId) => {
+    const poll = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/market/transactions/${transactionId}`);
+        const data = await res.json();
+        if (!data.success) return;
+
+        if (data.status.startsWith('ESCROW')) {
+          const until = data.escrowEndsAt ? new Date(data.escrowEndsAt).toLocaleDateString() : 'noma\'lum sana';
+          onToast?.(`Bitim Steam escrow'ga tushdi — ${until}gacha kutish kerak (akkauntda Mobile Authenticator 7 kundan kam faol).`);
+          return; // escrow holatida keyingi tekshiruvni to'xtatamiz — muddat tugagach qayta tekshirib bo'lmaydi, admin/keyingi login orqali davom etadi
+        }
+        if (data.status === 'COMPLETED') {
+          onToast?.('✅ Bitim yakunlandi!');
+          fetchListings();
+          return;
+        }
+        if (data.status === 'FAILED' || data.status === 'NEEDS_ADMIN_REVIEW') {
+          onToast?.(data.status === 'NEEDS_ADMIN_REVIEW'
+            ? '⚠️ Xaridorga jo\'natib bo\'lmadi — pulingiz avtomatik qaytarildi.'
+            : '❌ Bitim muvaffaqiyatsiz: ' + (data.failReason || 'noma\'lum xato'));
+          return;
+        }
+        // Hali jarayonda — 5 soniyadan keyin qayta tekshiramiz
+        setTimeout(poll, 5000);
+      } catch (e) {
+        // jim o'tkazamiz — keyingi pollda qayta urinamiz
+      }
+    };
+    poll();
+  };
+
   const buyListing = async (listing) => {
     if (!user) return onToast?.('Avval Steam orqali kiring');
     if (!user.tradeUrl) return onToast?.('Avval "Sotish" bo\'limida trade link kiriting');
@@ -185,6 +217,7 @@ export function SkinMarketView({ user, onToast }) {
       if (data.success) {
         onToast?.(data.message);
         fetchListings();
+        if (data.transactionId) pollTransactionStatus(data.transactionId);
       } else {
         onToast?.(data.message || 'Xarid qilib bo\'lmadi');
       }
