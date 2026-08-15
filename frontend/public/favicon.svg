@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800" width="100%" height="100%">
+  <rect width="800" height="800" rx="160" fill="#0f0c1b"/>
+  <g transform="translate(0, 0)">
+    {/* Outer Helmet Polygon Base */}
+    <path
+      d="M400 60 L650 180 L650 440 L600 560 L400 720 L200 560 L150 440 L150 180 Z"
+      fill="#7E22CE"
+    />
+    {/* Helmet Right Shading */}
+    <path
+      d="M400 60 L650 180 L650 440 L600 560 L400 720 V60 Z"
+      fill="#581C87"
+    />
+    {/* Visor & Eye Cutout */}
+    <path
+      d="M190 310 L310 500 L370 560 L400 590 L430 560 L490 500 L610 310 L540 460 L400 680 L260 460 Z"
+      fill="#FFFFFF"
+    />
+    {/* Star Emblem Accent */}
+    <path
+      d="M400 150 L425 215 L490 225 L445 270 L455 335 L400 305 L345 335 L355 270 L310 225 L375 215 Z"
+      fill="#F59E0B"
+    />
+  </g>
+</svg>
