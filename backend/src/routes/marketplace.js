@@ -132,6 +132,69 @@ router.get('/listings', async (req, res) => {
 });
 
 // ---------------------------------------------------------
+// 4b. Tezkor sotish (Instant Sell) — bozor narxining bir qismiga, darhol balansga
+// ---------------------------------------------------------
+const INSTANT_SELL_RATE = 0.5; // bozor narxining 50%i darhol to'lanadi
+
+router.post('/instant-sell', async (req, res) => {
+  const { sellerSteamId, assetId, classId, instanceId, marketHashName, iconUrl } = req.body;
+
+  if (!isBotReady()) {
+    return res.status(503).json({ success: false, message: 'Bot hozir mavjud emas, birozdan keyin urinib ko\'ring' });
+  }
+
+  const seller = await prisma.user.findUnique({ where: { steamId: sellerSteamId } });
+  if (!seller) return res.status(404).json({ success: false, message: 'Foydalanuvchi topilmadi' });
+  if (!seller.tradeUrl) {
+    return res.status(400).json({ success: false, message: 'Avval trade link kiriting' });
+  }
+
+  const marketPrice = await fetchMarketPrice(marketHashName);
+  if (!marketPrice) {
+    return res.status(400).json({ success: false, message: 'Bu item uchun bozor narxi topilmadi, tezkor sotish mumkin emas' });
+  }
+
+  const instantPrice = Math.max(MIN_PRICE, Number((marketPrice * INSTANT_SELL_RATE).toFixed(2)));
+
+  // Item "PENDING" sifatida yaratiladi. Sotuvchi trade'ni tasdiqlagach,
+  // status BOT_STOCK ga o'tadi va balans darhol to'ldiriladi.
+  const listing = await prisma.skinListing.create({
+    data: {
+      sellerId: seller.id,
+      assetId, classId, instanceId, marketHashName, iconUrl,
+      price: instantPrice,
+      status: 'PENDING',
+    },
+  });
+
+  const tx = await prisma.skinTransaction.create({
+    data: {
+      listingId: listing.id,
+      buyerId: seller.id, // instant-sell'da alohida xaridor yo'q — bot/sayt o'zi "xaridor"
+      sellerId: seller.id,
+      price: instantPrice,
+      status: 'AWAITING_SELLER_TRADE',
+    },
+  });
+
+  try {
+    const { offerId } = await requestItemFromSeller({ sellerTradeUrl: seller.tradeUrl, assetId });
+    await prisma.skinTransaction.update({ where: { id: tx.id }, data: { botToSellerTradeOfferId: String(offerId) } });
+
+    res.json({
+      success: true,
+      message: `Bot'ga so'rov yuborildi. Tasdiqlagach, $${instantPrice} balansingizga darhol tushadi.`,
+      instantPrice,
+      marketPrice,
+    });
+  } catch (err) {
+    await prisma.skinListing.delete({ where: { id: listing.id } });
+    await prisma.skinTransaction.update({ where: { id: tx.id }, data: { status: 'FAILED', failReason: err.message } });
+    res.status(500).json({ success: false, message: 'Botga ulanishda xatolik: ' + err.message });
+  }
+});
+
+// ---------------------------------------------------------
 // 5. Sotib olish — escrow oqimini boshlaydi
 // ---------------------------------------------------------
 router.post('/listings/:id/buy', async (req, res) => {
@@ -220,7 +283,19 @@ export function registerTradeStateWatcher() {
     });
 
     if (sellerTx) {
-      // Bot itemni sotuvchidan oldi -> endi xaridorga jo'natamiz
+      // INSTANT-SELL holati: buyerId === sellerId bo'lsa, bu oddiy sotuv emas —
+      // bot itemni "zaxira" sifatida saqlaydi, xaridorga qayta jo'natish kerak emas,
+      // sotuvchi balansi darhol to'ldiriladi.
+      if (sellerTx.buyerId === sellerTx.sellerId) {
+        await prisma.$transaction([
+          prisma.skinTransaction.update({ where: { id: sellerTx.id }, data: { status: 'COMPLETED' } }),
+          prisma.skinListing.update({ where: { id: sellerTx.listingId }, data: { status: 'BOT_STOCK' } }),
+          prisma.user.update({ where: { id: sellerTx.sellerId }, data: { balance: { increment: sellerTx.price } } }),
+        ]);
+        return;
+      }
+
+      // Oddiy sotuv: Bot itemni sotuvchidan oldi -> endi xaridorga jo'natamiz
       await prisma.skinTransaction.update({
         where: { id: sellerTx.id },
         data: { status: 'BOT_HOLDING_ITEM' },

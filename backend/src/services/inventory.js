@@ -18,7 +18,9 @@ export async function fetchInventory(steamId64) {
   }
 
   return new Promise((resolve, reject) => {
-    community.getUserInventoryContents(steamId64, CS2_APP_ID, CS2_CONTEXT_ID, true, (err, inventory) => {
+    // tradableOnly=false — barcha itemlarni olamiz, shu jumladan trade-cooldown'dagilarni ham,
+    // shunda ularni ro'yxatdan butunlay yashirish o'rniga frontend'da xira holatda ko'rsatamiz.
+    community.getUserInventoryContents(steamId64, CS2_APP_ID, CS2_CONTEXT_ID, false, (err, inventory) => {
       if (err) {
         console.error('[inventory] Steam xatosi:', err.message, err);
         return reject(new Error(err.message || 'Steam inventarni qaytarmadi'));
@@ -33,14 +35,23 @@ export async function fetchInventory(steamId64) {
         instanceId: item.instanceid,
         marketHashName: item.market_hash_name || 'Noma\'lum item',
         iconUrl: item.icon_url ? `https://community.akamai.steamstatic.com/economy/image/${item.icon_url}` : '',
-        // Steam already filtered to tradable-only (we passed tradableOnly=true above),
-        // so don't re-filter here — some steamcommunity versions don't set an explicit
-        // `.tradable` boolean per item, which previously caused everything to be dropped.
+        // Steam already filtered to tradable-only when tradableOnly=true was passed to
+        // getUserInventoryContents — BUT we now call it with tradableOnly=false
+        // so we can also show cooldown items (grayed out) instead of hiding them entirely.
         tradable: item.tradable !== false,
         marketable: !!item.marketable,
         type: item.type || '',
+        // `owner_descriptions` / `descriptions` sometimes carry the human-readable
+        // cooldown text Steam itself shows ("Tradable After <date>"). We surface it
+        // as-is so the frontend can display it; if absent, tradable=false items just
+        // show a generic "cooldown'da" label.
+        cooldownText: (item.descriptions || item.owner_descriptions || [])
+          .map((d) => d.value)
+          .find((v) => typeof v === 'string' && /trad(e|able)/i.test(v)) || null,
       }));
 
+      // Endi hech narsani filtrlamaymiz — cooldown'dagi (tradable=false) itemlar ham
+      // ro'yxatda qoladi, frontend ularni xira holatda ko'rsatadi.
       resolve(items);
     });
   });

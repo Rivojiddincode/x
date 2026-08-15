@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link2, Tag, ShoppingCart, RefreshCw, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Link2, Tag, ShoppingCart, RefreshCw, CheckCircle2, AlertCircle, Lock, Zap } from 'lucide-react';
 import { API_BASE } from '../api/client';
 
 export function SkinMarketView({ user, onToast }) {
@@ -14,6 +14,7 @@ export function SkinMarketView({ user, onToast }) {
   const [creatingListing, setCreatingListing] = useState(false);
   const [suggestedPrice, setSuggestedPrice] = useState(null);
   const [loadingPrice, setLoadingPrice] = useState(false);
+  const [instantSelling, setInstantSelling] = useState(false);
 
   const [listings, setListings] = useState([]);
   const [loadingListings, setLoadingListings] = useState(true);
@@ -97,6 +98,38 @@ export function SkinMarketView({ user, onToast }) {
       // narx topilmasa ham, foydalanuvchi qo'lda kirita oladi — xatoni yashirin qoldiramiz
     } finally {
       setLoadingPrice(false);
+    }
+  };
+
+  const instantSell = async () => {
+    if (!selectedItem) return;
+    setInstantSelling(true);
+    try {
+      const res = await fetch(`${API_BASE}/market/instant-sell`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sellerSteamId: user.steamId,
+          assetId: selectedItem.assetId,
+          classId: selectedItem.classId,
+          instanceId: selectedItem.instanceId,
+          marketHashName: selectedItem.marketHashName,
+          iconUrl: selectedItem.iconUrl,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        onToast?.(data.message);
+        setSelectedItem(null);
+        setListPrice('');
+        setInventory((prev) => prev.filter((i) => i.assetId !== selectedItem.assetId));
+      } else {
+        onToast?.(data.message || 'Tezkor sotishda xatolik');
+      }
+    } catch (e) {
+      onToast?.('Serverga ulanib bo\'lmadi');
+    } finally {
+      setInstantSelling(false);
     }
   };
 
@@ -202,6 +235,8 @@ export function SkinMarketView({ user, onToast }) {
           loadingPrice={loadingPrice}
           onCreateListing={createListing}
           creatingListing={creatingListing}
+          onInstantSell={instantSell}
+          instantSelling={instantSelling}
         />
       )}
     </div>
@@ -265,6 +300,7 @@ function SellTab({
   selectedItem, onSelectItem, listPrice, setListPrice,
   suggestedPrice, loadingPrice,
   onCreateListing, creatingListing,
+  onInstantSell, instantSelling,
 }) {
   if (!user) {
     return (
@@ -323,16 +359,27 @@ function SellTab({
                 key={item.assetId}
                 className="card"
                 style={{
-                  cursor: 'pointer',
+                  cursor: item.tradable ? 'pointer' : 'not-allowed',
+                  opacity: item.tradable ? 1 : 0.45,
+                  filter: item.tradable ? 'none' : 'grayscale(0.6)',
+                  position: 'relative',
                   borderColor: selectedItem?.assetId === item.assetId ? 'var(--money)' : 'var(--card-border)',
                   padding: '12px',
                 }}
-                onClick={() => onSelectItem(item)}
+                onClick={() => item.tradable && onSelectItem(item)}
               >
                 <div style={{ height: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.25)', borderRadius: '8px', marginBottom: '8px' }}>
                   {item.iconUrl ? <img src={item.iconUrl} alt={item.marketHashName} style={{ maxHeight: '90%', maxWidth: '90%' }} /> : <Tag size={24} color="var(--text-muted)" />}
                 </div>
                 <p style={{ fontSize: '11px', textAlign: 'center' }}>{item.marketHashName}</p>
+                {!item.tradable && (
+                  <div style={{
+                    marginTop: '6px', fontSize: '10px', color: '#f87171', textAlign: 'center',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
+                  }}>
+                    <Lock size={11} /> {item.cooldownText || 'Trade cooldown\'da'}
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -374,6 +421,24 @@ function SellTab({
           <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px' }}>
             Minimal sotuv narxi: $0.5. Undan past narx serverda rad etiladi.
           </p>
+
+          {suggestedPrice && (
+            <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--card-border)' }}>
+              <button
+                className="btn btn-steam"
+                style={{ width: '100%', justifyContent: 'center', borderColor: 'rgba(74,222,128,0.4)', color: 'var(--green)' }}
+                onClick={onInstantSell}
+                disabled={instantSelling}
+              >
+                <Zap size={15} /> {instantSelling
+                  ? 'Yuborilmoqda...'
+                  : `Tezkor Sotish — darhol $${(suggestedPrice * 0.5).toFixed(2)}`}
+              </button>
+              <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px', textAlign: 'center' }}>
+                Xaridorni kutmasdan, bozor narxining 50%i darhol balansingizga tushadi.
+              </p>
+            </div>
+          )}
         </div>
       )}
     </div>
