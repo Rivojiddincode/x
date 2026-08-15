@@ -6,7 +6,7 @@
       "destination": "https://x-k0u0.onrender.com/api/$1"
     },
     {
-      "source": "/(.*)",
+      "source": "/((?!.*\\.).*)",
       "destination": "/index.html"
     }
   ]
