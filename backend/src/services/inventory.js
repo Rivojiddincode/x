@@ -45,9 +45,17 @@ export async function fetchInventory(steamId64) {
         // cooldown text Steam itself shows ("Tradable After <date>"). We surface it
         // as-is so the frontend can display it; if absent, tradable=false items just
         // show a generic "cooldown'da" label.
-        cooldownText: (item.descriptions || item.owner_descriptions || [])
-          .map((d) => d.value)
-          .find((v) => typeof v === 'string' && /trad(e|able)/i.test(v)) || null,
+        // `cache_expiration` — bu Steam'ning haqiqiy maydoni, trade cooldown tugaydigan
+        // aniq sana-vaqtni beradi (CS2 itemlari uchun). Description matnidan qidirishdan
+        // ko'ra ancha ishonchli.
+        cooldownUntil: item.cache_expiration || null,
+        cooldownText: item.cache_expiration
+          ? `${new Date(item.cache_expiration).toLocaleDateString('uz-UZ')} gacha`
+          : (item.tradable === false
+            ? (item.descriptions || item.owner_descriptions || [])
+                .map((d) => d.value)
+                .find((v) => typeof v === 'string' && /trad(e|able)/i.test(v)) || 'Trade cooldown\'da'
+            : null),
         inspectLink: buildInspectLink(item.actions, steamId64, item.assetid || item.id),
       }));
 
