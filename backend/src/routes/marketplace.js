@@ -3,7 +3,7 @@
 
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
-import { fetchInventory, parseTradeUrl, isTradeUrlOwnedBySteamId, fetchMarketPrice } from '../services/inventory.js';
+import { fetchInventory, parseTradeUrl, isTradeUrlOwnedBySteamId, fetchMarketPrice, fetchFloatData } from '../services/inventory.js';
 import { requestItemFromSeller, sendItemToBuyer, onOfferStateChanged, isBotReady } from '../services/steamBot.js';
 
 const prisma = new PrismaClient();
@@ -75,6 +75,25 @@ router.get('/market-price', async (req, res) => {
       return res.json({ success: true, price: null, message: 'Steam narx bermadi (yangi/kam savdo qilinadigan item bo\'lishi mumkin)' });
     }
     res.json({ success: true, price });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ---------------------------------------------------------
+// 2c. Berilgan item uchun float qiymati va paint seed (CSGOFloat ochiq API orqali)
+// ---------------------------------------------------------
+router.get('/float', async (req, res) => {
+  const { inspectLink, assetId } = req.query;
+  if (!inspectLink || !assetId) {
+    return res.status(400).json({ success: false, message: 'inspectLink va assetId talab qilinadi' });
+  }
+  try {
+    const data = await fetchFloatData(inspectLink, assetId);
+    if (!data) {
+      return res.json({ success: true, data: null, message: 'Float ma\'lumoti topilmadi' });
+    }
+    res.json({ success: true, data });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -287,6 +306,20 @@ export function registerTradeStateWatcher() {
         where: { botToSellerTradeOfferId: String(offerId), status: 'AWAITING_SELLER_TRADE' },
       });
       if (sellerTxEscrow) {
+        // INSTANT-SELL bo'lsa: item ownership allaqachon botga o'tdi (escrow faqat botning
+        // uni QAYTA jo'natish huquqini cheklaydi, sotuvchidan olishni emas). Shuning uchun
+        // sotuvchiga darhol to'lash mumkin — item xavfsiz, faqat vaqtincha botda "band" holatda.
+        if (sellerTxEscrow.buyerId === sellerTxEscrow.sellerId) {
+          await prisma.$transaction([
+            prisma.skinTransaction.update({
+              where: { id: sellerTxEscrow.id },
+              data: { status: 'COMPLETED', escrowEndsAt: escrowEnds },
+            }),
+            prisma.skinListing.update({ where: { id: sellerTxEscrow.listingId }, data: { status: 'BOT_STOCK' } }),
+            prisma.user.update({ where: { id: sellerTxEscrow.sellerId }, data: { balance: { increment: sellerTxEscrow.price } } }),
+          ]);
+          return;
+        }
         await prisma.skinTransaction.update({
           where: { id: sellerTxEscrow.id },
           data: { status: 'ESCROW_SELLER', escrowEndsAt: escrowEnds },
@@ -413,3 +446,31 @@ router.get('/transactions/:id', async (req, res) => {
 });
 
 export default router;
+
+// ---------------------------------------------------------
+// Escrow tugagan (real, ikkinchi xaridorli) bitimlarni avtomatik davom ettirish
+// ---------------------------------------------------------
+// Steam escrow tugaganda alohida signal yubormaydi — shuning uchun har 15 daqiqada
+// escrowEndsAt vaqti o'tgan ESCROW_SELLER bitimlarni tekshirib, xaridorga jo'natishga
+// urinamiz. (Instant-sell'ga tegishli emas — u escrow boshlanishi bilanoq to'lanadi.)
+export function startEscrowReleaseChecker() {
+  setInterval(async () => {
+    const dueTransactions = await prisma.skinTransaction.findMany({
+      where: { status: 'ESCROW_SELLER', escrowEndsAt: { lte: new Date() } },
+      include: { listing: true, buyer: true },
+    });
+
+    for (const tx of dueTransactions) {
+      try {
+        const { offerId } = await sendItemToBuyer({ buyerTradeUrl: tx.buyer.tradeUrl, assetId: tx.listing.assetId });
+        await prisma.skinTransaction.update({
+          where: { id: tx.id },
+          data: { status: 'AWAITING_BUYER_TRADE', botToBuyerTradeOfferId: String(offerId) },
+        });
+      } catch (err) {
+        console.error(`[market] Escrow tugagan bitim #${tx.id}ni xaridorga jo'natishda xato:`, err.message);
+        // Keyingi tekshiruvda qayta urinib ko'ramiz — status o'zgartirmaymiz
+      }
+    }
+  }, 15 * 60 * 1000); // 15 daqiqada bir
+}
