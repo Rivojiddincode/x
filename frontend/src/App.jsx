@@ -23,7 +23,7 @@ export default function App() {
   // Modals
   const [showPaymeModal, setShowPaymeModal] = useState(false);
   const [paymeAmount, setPaymeAmount] = useState(50000);
-  const [paymeSteamId, setPaymeSteamId] = useState('STEAM_1:0:9823412');
+  const [paymeSteamId, setPaymeSteamId] = useState('');
 
   // Persistent User State from localStorage
   const [user, setUser] = useState(() => {
@@ -47,6 +47,11 @@ export default function App() {
       const avatar = urlParams.get('avatar') || `https://api.dicebear.com/7.x/bottts/svg?seed=${steamId}`;
       const balance = Number(urlParams.get('balance') ?? 0);
       const vipRole = urlParams.get('vipRole') || "Oddiy O'yinchi";
+      const token = urlParams.get('token');
+
+      if (token) {
+        localStorage.setItem('starscs_token', token);
+      }
 
       const userData = {
         steamId,
@@ -57,11 +62,14 @@ export default function App() {
         vipRole
       };
 
-      // Sync to Database
+      // Sync to Database (endi Authorization header bilan — token shart)
       fetch(`${API_BASE}/auth/steam/sync`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(userData)
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { Authorization: `Bearer ${token}` }),
+        },
+        body: JSON.stringify({ displayName: name, avatarUrl: avatar })
       }).catch(err => console.log('DB sync offline'));
 
       setUser(userData);
@@ -104,6 +112,7 @@ export default function App() {
     setUser(null);
     localStorage.removeItem('starscs_user');
     localStorage.removeItem('starscs_steam_id');
+    localStorage.removeItem('starscs_token');
     showToastMsg('Tizimdan chiqildi.');
     setActiveTab('servers');
   };
@@ -162,6 +171,32 @@ export default function App() {
     }
   };
 
+  // Haqiqiy VIP xarid — balans yetarli bo'lsa darhol xarid qiladi (backend narxni
+  // o'zi tekshiradi, client narxga ishonilmaydi), yetarli bo'lmasa Payme'ga yo'naltiradi.
+  const handleBuyVip = async (tierId, displayPrice) => {
+    if (!user) {
+      showToastMsg('Avval Steam orqali kiring');
+      return;
+    }
+    try {
+      const res = await apiClient.buyVipTier(tierId);
+      if (res.success) {
+        showToastMsg(res.message);
+        setUser((prev) => ({ ...prev, balance: res.user.balance, vipRole: res.user.vipRole }));
+        localStorage.setItem('starscs_user', JSON.stringify({ ...user, balance: res.user.balance, vipRole: res.user.vipRole }));
+      } else if (res.needsTopUp) {
+        showToastMsg(res.message + ' — balansni to\'ldiring.');
+        setPaymeAmount(res.shortfall);
+        setPaymeSteamId(user.steamId);
+        setShowPaymeModal(true);
+      } else {
+        showToastMsg(res.message || 'Xarid qilib bo\'lmadi');
+      }
+    } catch (e) {
+      showToastMsg('Serverga ulanib bo\'lmadi');
+    }
+  };
+
   // Real Steam OpenID Login Handler — redirects to Steam's actual login page
   const handleSteamLogin = async () => {
     try {
@@ -200,7 +235,7 @@ export default function App() {
         activeTab={activeTab} 
         setActiveTab={setActiveTab} 
         totalOnline={totalOnline}
-        onOpenPayme={() => setShowPaymeModal(true)}
+        onOpenPayme={() => { setPaymeSteamId(user?.steamId || ''); setShowPaymeModal(true); }}
         onOpenSteam={handleSteamLogin}
         user={user}
       />
@@ -222,7 +257,7 @@ export default function App() {
         {activeTab === 'store' && (
           <StoreView 
             storeItems={storeItems} 
-            onBuy={(price) => { setPaymeAmount(price); setShowPaymeModal(true); }} 
+            onBuy={handleBuyVip} 
           />
         )}
 
@@ -238,7 +273,8 @@ export default function App() {
           <ProfileView 
             user={user} 
             onLogout={handleLogout} 
-            onOpenPayme={() => setShowPaymeModal(true)} 
+            onOpenPayme={() => { setPaymeSteamId(user?.steamId || ''); setShowPaymeModal(true); }} 
+            setActiveTab={setActiveTab}
           />
         )}
 

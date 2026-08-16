@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link2, Tag, ShoppingCart, RefreshCw, CheckCircle2, AlertCircle, Lock, Zap } from 'lucide-react';
-import { API_BASE } from '../api/client';
+import { API_BASE, authFetch } from '../api/client';
 
 export function SkinMarketView({ user, onToast }) {
   const [subTab, setSubTab] = useState('shop'); // 'shop' | 'sell'
@@ -46,12 +46,10 @@ export function SkinMarketView({ user, onToast }) {
     }
     setSavingTradeUrl(true);
     try {
-      const res = await fetch(`${API_BASE}/market/trade-url`, {
+      const data = await authFetch('/market/trade-url', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ steamId: user.steamId, tradeUrl }),
+        body: JSON.stringify({ tradeUrl }),
       });
-      const data = await res.json();
       if (data.success) {
         onToast?.('Trade link saqlandi!');
       } else {
@@ -69,8 +67,7 @@ export function SkinMarketView({ user, onToast }) {
     setLoadingInventory(true);
     setInventory([]);
     try {
-      const res = await fetch(`${API_BASE}/market/inventory/${user.steamId}`);
-      const data = await res.json();
+      const data = await authFetch(`/market/inventory/${user.steamId}`);
       if (data.success) {
         setInventory(data.items);
         if (data.items.length === 0) onToast?.('Inventaringizda sotish mumkin bo\'lgan item topilmadi');
@@ -120,11 +117,9 @@ export function SkinMarketView({ user, onToast }) {
     if (!selectedItem) return;
     setInstantSelling(true);
     try {
-      const res = await fetch(`${API_BASE}/market/instant-sell`, {
+      const data = await authFetch('/market/instant-sell', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          sellerSteamId: user.steamId,
           assetId: selectedItem.assetId,
           classId: selectedItem.classId,
           instanceId: selectedItem.instanceId,
@@ -132,7 +127,6 @@ export function SkinMarketView({ user, onToast }) {
           iconUrl: selectedItem.iconUrl,
         }),
       });
-      const data = await res.json();
       if (data.success) {
         onToast?.(data.message);
         setSelectedItem(null);
@@ -157,11 +151,9 @@ export function SkinMarketView({ user, onToast }) {
     }
     setCreatingListing(true);
     try {
-      const res = await fetch(`${API_BASE}/market/listings`, {
+      const data = await authFetch('/market/listings', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          sellerSteamId: user.steamId,
           assetId: selectedItem.assetId,
           classId: selectedItem.classId,
           instanceId: selectedItem.instanceId,
@@ -170,7 +162,6 @@ export function SkinMarketView({ user, onToast }) {
           price,
         }),
       });
-      const data = await res.json();
       if (data.success) {
         onToast?.('Item sotuvga qo\'yildi!');
         setSelectedItem(null);
@@ -224,12 +215,10 @@ export function SkinMarketView({ user, onToast }) {
     if (!user.tradeUrl) return onToast?.('Avval "Sotish" bo\'limida trade link kiriting');
     setBuyingId(listing.id);
     try {
-      const res = await fetch(`${API_BASE}/market/listings/${listing.id}/buy`, {
+      const data = await authFetch(`/market/listings/${listing.id}/buy`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ buyerSteamId: user.steamId }),
+        body: JSON.stringify({}),
       });
-      const data = await res.json();
       if (data.success) {
         onToast?.(data.message);
         fetchListings();
@@ -450,7 +439,7 @@ function SellTab({
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                 <span style={{
                   background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.35)',
-                  padding: '3px 10px', borderRadius: '6px', color: '#60a5fa', fontFamily: 'monospace', fontWeight: '700',
+                  padding: '3px 10px', borderRadius: '6px', color: 'var(--span)', fontFamily: 'monospace', fontWeight: '700',
                 }}>
                   Float: {floatData.floatValue?.toFixed(6)}
                 </span>

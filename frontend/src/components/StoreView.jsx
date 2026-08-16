@@ -86,7 +86,7 @@ export function StoreView({ storeItems = [], onBuy }) {
               <button
                 className="vip-buy-btn"
                 style={{ background: `linear-gradient(135deg, ${accent}, ${accent}cc)`, boxShadow: `0 8px 20px -6px ${accent}88` }}
-                onClick={() => onBuy(item.price)}
+                onClick={() => onBuy(item.id, item.price)}
               >
                 <ShoppingCart size={16} /> Xarid qilish
               </button>

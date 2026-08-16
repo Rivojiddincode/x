@@ -6,6 +6,25 @@ export const API_BASE = isLocalhost
   ? 'http://localhost:5000/api/v1' 
   : (import.meta.env.VITE_API_URL || '/api/v1');
 
+/**
+ * Autentifikatsiya talab qiladigan barcha so'rovlar shu orqali yuborilishi kerak —
+ * `starscs_token`ni (Steam login'da olingan JWT) avtomatik Authorization header'ga qo'shadi.
+ * Token bo'lmasa (kirilmagan), so'rov baribir yuboriladi — backend 401 qaytaradi,
+ * chaqiruvchi tomon buni ushlab, foydalanuvchini qayta login qilishga yo'naltiradi.
+ */
+export async function authFetch(path, options = {}) {
+  const token = localStorage.getItem('starscs_token');
+  const res = await fetch(`${API_BASE}${path}`, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token && { Authorization: `Bearer ${token}` }),
+      ...options.headers,
+    },
+  });
+  return res.json();
+}
+
 export const apiClient = {
   async getServers(mode = 'all') {
     const res = await axios.get(`${API_BASE}/servers?mode=${mode}`);
@@ -40,5 +59,12 @@ export const apiClient = {
   async authenticateSteam() {
     const res = await axios.post(`${API_BASE}/auth/steam`);
     return res.data;
+  },
+
+  async buyVipTier(tierId) {
+    return authFetch('/vip/purchase', {
+      method: 'POST',
+      body: JSON.stringify({ tierId }),
+    });
   }
 };

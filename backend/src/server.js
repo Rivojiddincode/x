@@ -5,6 +5,8 @@ import { PrismaClient } from '@prisma/client';
 import { db } from './services/db.js';
 import marketRouter, { registerTradeStateWatcher, startEscrowReleaseChecker } from './routes/marketplace.js';
 import { startBot } from './services/steamBot.js';
+import { generateToken, requireAuth } from './middleware/auth.js';
+import vipRouter from './routes/vip.js';
 
 const prisma = new PrismaClient();
 
@@ -23,6 +25,9 @@ app.use((req, res, next) => {
 
 // Skin Marketplace routes (listings, inventory, buy/sell escrow flow)
 app.use('/api/v1/market', marketRouter);
+
+// VIP purchase routes
+app.use('/api/v1/vip', vipRouter);
 
 // Health check
 app.get('/api/v1/health', (req, res) => {
@@ -194,7 +199,9 @@ app.get('/api/v1/auth/steam/callback', async (req, res) => {
       },
     });
 
-    const redirectUrl = `${frontendOrigin}/?steamAuth=success&steamId=${steamId64}&name=${encodeURIComponent(userRecord.displayName)}&avatar=${encodeURIComponent(userRecord.avatarUrl)}&balance=${userRecord.balance}&vipRole=${encodeURIComponent(userRecord.vipRole)}`;
+    const token = generateToken(steamId64);
+
+    const redirectUrl = `${frontendOrigin}/?steamAuth=success&steamId=${steamId64}&name=${encodeURIComponent(userRecord.displayName)}&avatar=${encodeURIComponent(userRecord.avatarUrl)}&balance=${userRecord.balance}&vipRole=${encodeURIComponent(userRecord.vipRole)}&token=${encodeURIComponent(token)}`;
     return res.redirect(redirectUrl);
 
   } catch (error) {
@@ -243,11 +250,12 @@ app.get('/api/v1/auth/steam/user/:steamId', async (req, res) => {
 });
 
 // Save or Update User Profile directly in Database
-app.post('/api/v1/auth/steam/sync', async (req, res) => {
-  const { steamId, displayName, avatarUrl, balance, vipRole } = req.body;
-  if (!steamId) {
-    return res.status(400).json({ success: false, message: 'Steam ID kiritilmadi' });
-  }
+app.post('/api/v1/auth/steam/sync', requireAuth, async (req, res) => {
+  const steamId = req.user.steamId;
+  // MUHIM: balance va vipRole client'dan HECH QACHON qabul qilinmaydi — bular faqat
+  // server tomonidan (haqiqiy to'lov/VIP xarid endpoint'lari orqali) o'zgartiriladi.
+  // Aks holda, har kim o'ziga cheksiz balans/VIP bera olardi.
+  const { displayName, avatarUrl } = req.body;
 
   try {
     const userRecord = await prisma.user.upsert({
@@ -255,15 +263,13 @@ app.post('/api/v1/auth/steam/sync', async (req, res) => {
       update: {
         ...(displayName && { displayName }),
         ...(avatarUrl && { avatarUrl }),
-        ...(balance !== undefined && { balance }),
-        ...(vipRole && { vipRole }),
       },
       create: {
         steamId,
         displayName: displayName || `Player_${steamId.slice(-4)}`,
         avatarUrl: avatarUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=${steamId}`,
-        balance: balance ?? 0,
-        vipRole: vipRole || "Oddiy O'yinchi",
+        balance: 0,
+        vipRole: "Oddiy O'yinchi",
       },
     });
 

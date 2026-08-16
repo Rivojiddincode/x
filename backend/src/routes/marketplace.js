@@ -5,6 +5,7 @@ import express from 'express';
 import { PrismaClient } from '@prisma/client';
 import { fetchInventory, parseTradeUrl, isTradeUrlOwnedBySteamId, fetchMarketPrice, fetchFloatData } from '../services/inventory.js';
 import { requestItemFromSeller, sendItemToBuyer, onOfferStateChanged, isBotReady } from '../services/steamBot.js';
+import { requireAuth } from '../middleware/auth.js';
 
 const prisma = new PrismaClient();
 const router = express.Router();
@@ -14,10 +15,11 @@ const MIN_PRICE = 0.5;
 // ---------------------------------------------------------
 // 1. Foydalanuvchi trade link'ini saqlash
 // ---------------------------------------------------------
-router.post('/trade-url', async (req, res) => {
-  const { steamId, tradeUrl } = req.body;
-  if (!steamId || !tradeUrl) {
-    return res.status(400).json({ success: false, message: 'steamId va tradeUrl talab qilinadi' });
+router.post('/trade-url', requireAuth, async (req, res) => {
+  const steamId = req.user.steamId; // endi req.body dan emas — tokendan olinadi, soxtalashtirib bo'lmaydi
+  const { tradeUrl } = req.body;
+  if (!tradeUrl) {
+    return res.status(400).json({ success: false, message: 'tradeUrl talab qilinadi' });
   }
   const parsed = parseTradeUrl(tradeUrl);
   if (!parsed) {
@@ -52,7 +54,10 @@ router.post('/trade-url', async (req, res) => {
 // ---------------------------------------------------------
 // 2. Foydalanuvchining Steam inventarini ko'rsatish (sotuvga qo'yish uchun)
 // ---------------------------------------------------------
-router.get('/inventory/:steamId', async (req, res) => {
+router.get('/inventory/:steamId', requireAuth, async (req, res) => {
+  if (req.params.steamId !== req.user.steamId) {
+    return res.status(403).json({ success: false, message: 'Faqat o\'z inventaringizni ko\'ra olasiz' });
+  }
   try {
     const items = await fetchInventory(req.params.steamId);
     res.json({ success: true, items });
@@ -102,10 +107,11 @@ router.get('/float', async (req, res) => {
 // ---------------------------------------------------------
 // 3. Sotuvga qo'yish (Listing yaratish)
 // ---------------------------------------------------------
-router.post('/listings', async (req, res) => {
-  const { sellerSteamId, assetId, classId, instanceId, marketHashName, iconUrl, price } = req.body;
+router.post('/listings', requireAuth, async (req, res) => {
+  const sellerSteamId = req.user.steamId;
+  const { assetId, classId, instanceId, marketHashName, iconUrl, price } = req.body;
 
-  if (!sellerSteamId || !assetId || !price) {
+  if (!assetId || !price) {
     return res.status(400).json({ success: false, message: 'Majburiy maydonlar to\'ldirilmagan' });
   }
   if (Number(price) < MIN_PRICE) {
@@ -155,8 +161,9 @@ router.get('/listings', async (req, res) => {
 // ---------------------------------------------------------
 const INSTANT_SELL_RATE = 0.5; // bozor narxining 50%i darhol to'lanadi
 
-router.post('/instant-sell', async (req, res) => {
-  const { sellerSteamId, assetId, classId, instanceId, marketHashName, iconUrl } = req.body;
+router.post('/instant-sell', requireAuth, async (req, res) => {
+  const sellerSteamId = req.user.steamId;
+  const { assetId, classId, instanceId, marketHashName, iconUrl } = req.body;
 
   if (!isBotReady()) {
     return res.status(503).json({ success: false, message: 'Bot hozir mavjud emas, birozdan keyin urinib ko\'ring' });
@@ -218,9 +225,9 @@ router.post('/instant-sell', async (req, res) => {
 // ---------------------------------------------------------
 // 5. Sotib olish — escrow oqimini boshlaydi
 // ---------------------------------------------------------
-router.post('/listings/:id/buy', async (req, res) => {
+router.post('/listings/:id/buy', requireAuth, async (req, res) => {
   const listingId = Number(req.params.id);
-  const { buyerSteamId } = req.body;
+  const buyerSteamId = req.user.steamId;
 
   if (!isBotReady()) {
     return res.status(503).json({ success: false, message: 'Bot hozir mavjud emas, birozdan keyin urinib ko\'ring' });
