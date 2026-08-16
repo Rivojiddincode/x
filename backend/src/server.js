@@ -3,7 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import { PrismaClient } from '@prisma/client';
 import { db } from './services/db.js';
-import marketRouter, { registerTradeStateWatcher } from './routes/marketplace.js';
+import marketRouter, { registerTradeStateWatcher, startEscrowReleaseChecker } from './routes/marketplace.js';
 import { startBot } from './services/steamBot.js';
 
 const prisma = new PrismaClient();
@@ -284,3 +284,4 @@ app.listen(PORT, () => {
 // Boot the Steam trade bot and start watching escrow trade offer states.
 startBot();
 registerTradeStateWatcher();
+startEscrowReleaseChecker();

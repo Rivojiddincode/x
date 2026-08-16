@@ -36,7 +36,7 @@ export async function fetchInventory(steamId64) {
         marketHashName: item.market_hash_name || 'Noma\'lum item',
         iconUrl: item.icon_url ? `https://community.akamai.steamstatic.com/economy/image/${item.icon_url}` : '',
         // Steam already filtered to tradable-only when tradableOnly=true was passed to
-        // getUserInventoryContents — BUT we now call it with tradableOnly=false
+        // getUserInventoryContents — BUT we now call it with tradableOnly=false (see below)
         // so we can also show cooldown items (grayed out) instead of hiding them entirely.
         tradable: item.tradable !== false,
         marketable: !!item.marketable,
@@ -48,6 +48,7 @@ export async function fetchInventory(steamId64) {
         cooldownText: (item.descriptions || item.owner_descriptions || [])
           .map((d) => d.value)
           .find((v) => typeof v === 'string' && /trad(e|able)/i.test(v)) || null,
+        inspectLink: buildInspectLink(item.actions, steamId64, item.assetid || item.id),
       }));
 
       // Endi hech narsani filtrlamaymiz — cooldown'dagi (tradable=false) itemlar ham
@@ -57,9 +58,65 @@ export async function fetchInventory(steamId64) {
   });
 }
 
+// Float keshi — har item uchun 30 daqiqa (float o'zgarmaydi, lekin API'ni ortiqcha yuklamaslik uchun)
+const floatCache = new Map(); // assetId -> { data, fetchedAt }
+const FLOAT_CACHE_TTL_MS = 30 * 60 * 1000;
+
 /**
- * Trade URL formatini tekshirish va undan partner/token qismini chiqarib olish.
+ * Steam item'ning "actions" massivida "Inspect in Game..." havolasi bo'ladi,
+ * ichida %owner_steamid% va %assetid% o'rniga qo'yiladigan shablon sifatida.
+ * Buni haqiqiy qiymatlar bilan to'ldirib, ochiq CSGOFloat API'ga yuboramiz.
  */
+export function buildInspectLink(rawActions, steamId64, assetId) {
+  if (!rawActions || !rawActions.length) return null;
+  const inspectAction = rawActions.find((a) => a.link && a.link.includes('csgo_econ_action_preview'));
+  if (!inspectAction) return null;
+  return inspectAction.link
+    .replace('%owner_steamid%', steamId64)
+    .replace('%assetid%', assetId);
+}
+
+/**
+ * Ochiq CSGOFloat inspect API orqali float qiymati va paint seed'ni oladi.
+ * Bu — Valve'ning o'ziga (Game Coordinator'ga) so'rov yuboradigan ochiq xizmat,
+ * bizga alohida CS2 o'rnatilgan bot kerak emas.
+ */
+export async function fetchFloatData(inspectLink, assetId) {
+  if (!inspectLink) return null;
+
+  const cached = floatCache.get(assetId);
+  if (cached && Date.now() - cached.fetchedAt < FLOAT_CACHE_TTL_MS) {
+    return cached.data;
+  }
+
+  try {
+    const url = `https://api.csgofloat.com/?url=${encodeURIComponent(inspectLink)}`;
+    const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (StarsCS Float Fetcher)' } });
+    if (!res.ok) {
+      floatCache.set(assetId, { data: null, fetchedAt: Date.now() });
+      return null;
+    }
+    const data = await res.json();
+    const info = data.iteminfo;
+    if (!info) {
+      floatCache.set(assetId, { data: null, fetchedAt: Date.now() });
+      return null;
+    }
+    const result = {
+      floatValue: info.floatvalue,
+      paintSeed: info.paintseed,
+      wearName: info.wear_name,
+      min: info.min,
+      max: info.max,
+    };
+    floatCache.set(assetId, { data: result, fetchedAt: Date.now() });
+    return result;
+  } catch (e) {
+    floatCache.set(assetId, { data: null, fetchedAt: Date.now() });
+    return null;
+  }
+}
+
 export function parseTradeUrl(tradeUrl) {
   try {
     const url = new URL(tradeUrl);

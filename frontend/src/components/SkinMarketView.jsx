@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link2, Tag, ShoppingCart, RefreshCw, CheckCircle2, AlertCircle, Lock, Zap } from 'lucide-react';
+import { Link2, Tag, ShoppingCart, RefreshCw, CheckCircle2, AlertCircle, Lock, Zap, Gauge } from 'lucide-react';
 import { API_BASE } from '../api/client';
 
 export function SkinMarketView({ user, onToast }) {
@@ -15,6 +15,9 @@ export function SkinMarketView({ user, onToast }) {
   const [suggestedPrice, setSuggestedPrice] = useState(null);
   const [loadingPrice, setLoadingPrice] = useState(false);
   const [instantSelling, setInstantSelling] = useState(false);
+
+  const [floatData, setFloatData] = useState(null);
+  const [loadingFloat, setLoadingFloat] = useState(false);
 
   const [listings, setListings] = useState([]);
   const [loadingListings, setLoadingListings] = useState(true);
@@ -86,18 +89,33 @@ export function SkinMarketView({ user, onToast }) {
     setSelectedItem(item);
     setListPrice('');
     setSuggestedPrice(null);
+    setFloatData(null);
     setLoadingPrice(true);
+
     try {
       const res = await fetch(`${API_BASE}/market/market-price?marketHashName=${encodeURIComponent(item.marketHashName)}`);
       const data = await res.json();
       if (data.success && data.price) {
         setSuggestedPrice(data.price);
-        setListPrice(data.price.toFixed(2)); // avtomatik to'ldirish — foydalanuvchi xohlasa o'zgartiradi
+        setListPrice(data.price.toFixed(2));
       }
     } catch (e) {
-      // narx topilmasa ham, foydalanuvchi qo'lda kirita oladi — xatoni yashirin qoldiramiz
     } finally {
       setLoadingPrice(false);
+    }
+
+    if (item.inspectLink) {
+      setLoadingFloat(true);
+      try {
+        const res = await fetch(`${API_BASE}/market/float?inspectLink=${encodeURIComponent(item.inspectLink)}&assetId=${item.assetId}`);
+        const data = await res.json();
+        if (data.success && data.data) {
+          setFloatData(data.data);
+        }
+      } catch (e) {
+      } finally {
+        setLoadingFloat(false);
+      }
     }
   };
 
@@ -122,6 +140,7 @@ export function SkinMarketView({ user, onToast }) {
         onToast?.(data.message);
         setSelectedItem(null);
         setListPrice('');
+        setFloatData(null);
         setInventory((prev) => prev.filter((i) => i.assetId !== selectedItem.assetId));
         if (data.transactionId) pollTransactionStatus(data.transactionId);
       } else {
@@ -160,6 +179,7 @@ export function SkinMarketView({ user, onToast }) {
         onToast?.('Item sotuvga qo\'yildi!');
         setSelectedItem(null);
         setListPrice('');
+        setFloatData(null);
         setInventory((prev) => prev.filter((i) => i.assetId !== selectedItem.assetId));
         fetchListings();
       } else {
@@ -182,7 +202,7 @@ export function SkinMarketView({ user, onToast }) {
         if (data.status.startsWith('ESCROW')) {
           const until = data.escrowEndsAt ? new Date(data.escrowEndsAt).toLocaleDateString() : 'noma\'lum sana';
           onToast?.(`Bitim Steam escrow'ga tushdi — ${until}gacha kutish kerak (akkauntda Mobile Authenticator 7 kundan kam faol).`);
-          return; // escrow holatida keyingi tekshiruvni to'xtatamiz — muddat tugagach qayta tekshirib bo'lmaydi, admin/keyingi login orqali davom etadi
+          return;
         }
         if (data.status === 'COMPLETED') {
           onToast?.('✅ Bitim yakunlandi!');
@@ -195,10 +215,8 @@ export function SkinMarketView({ user, onToast }) {
             : '❌ Bitim muvaffaqiyatsiz: ' + (data.failReason || 'noma\'lum xato'));
           return;
         }
-        // Hali jarayonda — 5 soniyadan keyin qayta tekshiramiz
         setTimeout(poll, 5000);
       } catch (e) {
-        // jim o'tkazamiz — keyingi pollda qayta urinamiz
       }
     };
     poll();
@@ -271,6 +289,8 @@ export function SkinMarketView({ user, onToast }) {
           creatingListing={creatingListing}
           onInstantSell={instantSell}
           instantSelling={instantSelling}
+          floatData={floatData}
+          loadingFloat={loadingFloat}
         />
       )}
     </div>
@@ -335,6 +355,7 @@ function SellTab({
   suggestedPrice, loadingPrice,
   onCreateListing, creatingListing,
   onInstantSell, instantSelling,
+  floatData, loadingFloat,
 }) {
   if (!user) {
     return (
@@ -424,6 +445,18 @@ function SellTab({
       {selectedItem && (
         <div className="card">
           <h3 className="card-title" style={{ fontSize: '15px' }}>Sotuvga qo'yish: {selectedItem.marketHashName}</h3>
+
+          {/* CSGOFloat Data Rendering */}
+          {loadingFloat ? (
+            <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '6px 0' }}>Float qiymati olinmoqda...</p>
+          ) : floatData ? (
+            <div style={{ padding: '8px 12px', background: 'rgba(126,34,206,0.15)', border: '1px solid rgba(168,85,247,0.3)', borderRadius: '6px', margin: '8px 0', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+              <Gauge size={14} color="#c084fc" />
+              <span style={{ color: '#c084fc', fontWeight: 'bold' }}>Float: {floatData.floatValue?.toFixed(6)}</span>
+              {floatData.wearName && <span style={{ color: 'var(--text-muted)' }}>({floatData.wearName})</span>}
+              {floatData.paintSeed !== undefined && <span style={{ color: '#fbbf24' }}>Pattern Seed: {floatData.paintSeed}</span>}
+            </div>
+          ) : null}
 
           <div style={{ margin: '10px 0 4px', fontSize: '12px', color: 'var(--text-muted)' }}>
             {loadingPrice ? (
