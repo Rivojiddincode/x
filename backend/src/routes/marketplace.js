@@ -187,6 +187,7 @@ router.post('/instant-sell', async (req, res) => {
       message: `Bot'ga so'rov yuborildi. Tasdiqlagach, $${instantPrice} balansingizga darhol tushadi.`,
       instantPrice,
       marketPrice,
+      transactionId: tx.id,
     });
   } catch (err) {
     await prisma.skinListing.delete({ where: { id: listing.id } });

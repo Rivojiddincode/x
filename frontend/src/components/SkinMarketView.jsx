@@ -123,6 +123,7 @@ export function SkinMarketView({ user, onToast }) {
         setSelectedItem(null);
         setListPrice('');
         setInventory((prev) => prev.filter((i) => i.assetId !== selectedItem.assetId));
+        if (data.transactionId) pollTransactionStatus(data.transactionId);
       } else {
         onToast?.(data.message || 'Tezkor sotishda xatolik');
       }
