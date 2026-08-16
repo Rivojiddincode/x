@@ -8,6 +8,7 @@
 // through the bot's already-authenticated SteamCommunity session avoids this.
 
 import { community, isBotReady } from './steamBot.js';
+import { decodeLink } from '@csfloat/cs2-inspect-serializer';
 
 const CS2_APP_ID = 730;
 const CS2_CONTEXT_ID = 2;
@@ -86,8 +87,11 @@ export function buildInspectLink(rawActions, steamId64, assetId) {
 
 /**
  * Ochiq CSGOFloat inspect API orqali float qiymati va paint seed'ni oladi.
- * Bu — Valve'ning o'ziga (Game Coordinator'ga) so'rov yuboradigan ochiq xizmat,
- * bizga alohida CS2 o'rnatilgan bot kerak emas.
+ * 2026-yildan boshlab CS2 inspect linklar o'z ichida (self-encoded) float/paint seed
+ * ma'lumotini to'g'ridan-to'g'ri saqlaydi — shuning uchun avval MAHALLIY dekodlashga
+ * urinamiz (tashqi so'rov kerak emas, tezroq va ishonchli). Faqat link "eski" (pointer)
+ * formatda bo'lsa, tashqi API'ga murojaat qilamiz — lekin 2026-yilda Steam Game
+ * Coordinator'dagi uzilishlar tufayli bu variant ishlamasligi mumkin.
  */
 export async function fetchFloatData(inspectLink, assetId) {
   if (!inspectLink) return null;
@@ -97,6 +101,23 @@ export async function fetchFloatData(inspectLink, assetId) {
     return cached.data;
   }
 
+  // 1-urinish: mahalliy dekodlash (tashqi so'rovsiz, tezkor)
+  try {
+    const decoded = decodeLink(inspectLink);
+    if (decoded && typeof decoded.paintwear === 'number') {
+      const result = {
+        floatValue: decoded.paintwear,
+        paintSeed: decoded.paintseed,
+        paintIndex: decoded.paintindex,
+      };
+      floatCache.set(assetId, { data: result, fetchedAt: Date.now() });
+      return result;
+    }
+  } catch (e) {
+    // Link "eski" (self-encode qilinmagan, faqat pointer) formatda — pastdagi fallback'ga o'tamiz
+  }
+
+  // 2-urinish (zaxira): tashqi API — faqat eski uslubdagi linklar uchun kerak bo'ladi
   try {
     const url = `https://api.csgofloat.com/?url=${encodeURIComponent(inspectLink)}`;
     const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (StarsCS Float Fetcher)' } });
