@@ -44,15 +44,24 @@ app.use('/api/v1/admin', adminRouter);
 // inPAY to'lov routes (create invoice, webhook, status polling)
 app.use('/api/v1/payments/inpay', paymentsRouter);
 
-// Health check
+// Health check — inPAY konfiguratsiyasini ham tekshiradi
 app.get('/api/v1/health', (req, res) => {
+  const inpayMerchantId = process.env.INPAY_MERCHANT_ID;
+  const inpayToken = process.env.INPAY_MERCHANT_TOKEN;
   res.json({ 
     status: 'ok', 
     service: 'StarsCS Backend API', 
-    steamApiConfigured: true, 
+    steamApiConfigured: !!process.env.STEAM_API_KEY,
+    inpay: {
+      merchantIdSet: !!inpayMerchantId,
+      merchantTokenSet: !!inpayToken,
+      merchantTokenLength: inpayToken ? inpayToken.length : 0,
+      callbackUrl: process.env.INPAY_CALLBACK_URL || 'NOT SET',
+    },
     timestamp: new Date().toISOString() 
   });
 });
+
 
 // Servers API
 app.get('/api/v1/servers', (req, res) => {
