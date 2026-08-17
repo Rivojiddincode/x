@@ -8,6 +8,7 @@ import { startBot } from './services/steamBot.js';
 import { generateToken, requireAuth } from './middleware/auth.js';
 import vipRouter, { VIP_TIERS } from './routes/vip.js';
 import adminRouter from './routes/admin.js';
+import { generalLimiter, authLimiter } from './middleware/rateLimit.js';
 
 const prisma = new PrismaClient();
 
@@ -17,6 +18,7 @@ const STEAM_API_KEY = process.env.STEAM_API_KEY;
 
 app.use(cors());
 app.use(express.json());
+app.use('/api/', generalLimiter); // barcha API uchun umumiy chegara
 
 // Logging Middleware
 app.use((req, res, next) => {
@@ -164,7 +166,7 @@ app.post('/api/v1/payments/payme/create', (req, res) => {
 const PRODUCTION_FRONTEND_URL = 'https://stars-shop.uz';
 
 // Generate Steam OpenID Login URL
-app.get('/api/v1/auth/steam/login-url', (req, res) => {
+app.get('/api/v1/auth/steam/login-url', authLimiter, (req, res) => {
   let clientOrigin = '';
   if (req.query.frontend) {
     try { clientOrigin = new URL(decodeURIComponent(req.query.frontend)).origin; } catch (e) {}

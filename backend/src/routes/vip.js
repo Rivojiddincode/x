@@ -1,12 +1,8 @@
 // StarsCS — VIP Xarid Route
-// Bu fayl — VIP tariflar uchun YAGONA haqiqat manbai (narx, tavsif, xususiyatlar).
-// Frontend do'kon sahifasi ham shu ma'lumotni GET /vip/tiers yoki GET /store orqali oladi,
-// shuning uchun ko'rsatilgan narx bilan haqiqiy yechiladigan narx hech qachon
-// bir-biridan farq qilmaydi.
-
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
 import { requireAuth } from '../middleware/auth.js';
+import { sensitiveActionLimiter } from '../middleware/rateLimit.js';
 
 const prisma = new PrismaClient();
 const router = express.Router();
@@ -59,7 +55,7 @@ router.get('/tiers', (req, res) => {
   res.json({ success: true, tiers });
 });
 
-router.post('/purchase', requireAuth, async (req, res) => {
+router.post('/purchase', requireAuth, sensitiveActionLimiter, async (req, res) => {
   const steamId = req.user.steamId;
   const { tierId } = req.body;
 

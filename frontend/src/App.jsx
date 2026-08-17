@@ -9,6 +9,8 @@ import { BansView, RequestsView } from './components/BansView';
 import { ProfileView } from './components/ProfileView';
 import { SkinMarketView } from './components/SkinMarketView';
 import { AdminView } from './components/AdminView';
+import { Footer } from './components/Footer';
+import { LegalModal } from './components/LegalPages';
 import './styles/main.css';
 
 export default function App() {
@@ -21,6 +23,7 @@ export default function App() {
   const [bans, setBans] = useState([]);
   const [toast, setToast] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [legalModal, setLegalModal] = useState(null); // null | 'terms' | 'privacy'
   
   // Modals
   const [showPaymeModal, setShowPaymeModal] = useState(false);
@@ -41,7 +44,6 @@ export default function App() {
   const [reqForm, setReqForm] = useState({ name: '', telegram: '', type: 'admin', message: '' });
 
   useEffect(() => {
-    // Check Steam OpenID URL Callback Params & Sync with Database
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('steamAuth') === 'success') {
       const steamId = urlParams.get('steamId') || '76561198012345678';
@@ -64,7 +66,6 @@ export default function App() {
         vipRole
       };
 
-      // Sync to Database (endi Authorization header bilan — token shart)
       fetch(`${API_BASE}/auth/steam/sync`, {
         method: 'POST',
         headers: {
@@ -85,7 +86,6 @@ export default function App() {
       showToastMsg(`Steam xatoligi: ${msg}`);
       window.history.replaceState({}, document.title, window.location.pathname);
     } else {
-      // Fetch user from Database on load
       const savedSteamId = localStorage.getItem('starscs_steam_id');
       if (savedSteamId) {
         fetch(`${API_BASE}/auth/steam/user/${savedSteamId}`)
@@ -110,8 +110,6 @@ export default function App() {
     setTimeout(() => setToast(null), 4000);
   };
 
-  // Foydalanuvchi kirgan/o'zgargan sari admin huquqini tekshiramiz (faqat UX uchun —
-  // haqiqiy himoya backend'da requireAdmin orqali)
   useEffect(() => {
     if (!user) { setIsAdmin(false); return; }
     authFetch('/admin/check')
@@ -130,8 +128,6 @@ export default function App() {
 
   const fetchServers = async () => {
     try {
-      // Always fetch the full list — filtering by mode now happens client-side
-      // (GameModeGrid needs to see every mode at once to render its tiles/counts).
       const data = await apiClient.getServers('all');
       if (data.success) {
         setServers(data.servers);
@@ -182,8 +178,6 @@ export default function App() {
     }
   };
 
-  // Haqiqiy VIP xarid — balans yetarli bo'lsa darhol xarid qiladi (backend narxni
-  // o'zi tekshiradi, client narxga ishonilmaydi), yetarli bo'lmasa Payme'ga yo'naltiradi.
   const handleBuyVip = async (tierId, displayPrice) => {
     if (!user) {
       showToastMsg('Avval Steam orqali kiring');
@@ -208,7 +202,6 @@ export default function App() {
     }
   };
 
-  // Real Steam OpenID Login Handler — redirects to Steam's actual login page
   const handleSteamLogin = async () => {
     try {
       const res = await fetch(`${API_BASE}/auth/steam/login-url?frontend=${encodeURIComponent(window.location.origin)}`);
@@ -252,7 +245,7 @@ export default function App() {
         isAdmin={isAdmin}
       />
 
-      {/* Hero Section - ONLY rendered on the main servers page */}
+      {/* Hero Section */}
       {activeTab === 'servers' && <Hero totalOnline={totalOnline} serverCount={servers.length} />}
 
       {/* Main View Components */}
@@ -265,22 +258,15 @@ export default function App() {
             onToast={showToastMsg} 
           />
         )}
-
         {activeTab === 'store' && (
-          <StoreView 
-            storeItems={storeItems} 
-            onBuy={handleBuyVip} 
-          />
+          <StoreView storeItems={storeItems} onBuy={handleBuyVip} />
         )}
-
         {activeTab === 'leaderboard' && (
           <LeaderboardView leaderboard={leaderboard} />
         )}
-
         {activeTab === 'skins' && (
           <SkinMarketView user={user} onToast={showToastMsg} />
         )}
-
         {activeTab === 'profile' && (
           <ProfileView 
             user={user} 
@@ -289,15 +275,12 @@ export default function App() {
             setActiveTab={setActiveTab}
           />
         )}
-
         {activeTab === 'admin' && isAdmin && (
           <AdminView onToast={showToastMsg} />
         )}
-
         {activeTab === 'bans' && (
           <BansView bans={bans} />
         )}
-
         {activeTab === 'requests' && (
           <RequestsView 
             reqForm={reqForm} 
@@ -328,6 +311,14 @@ export default function App() {
             </form>
           </div>
         </div>
+      )}
+
+      {/* Footer with Legal Links */}
+      <Footer onOpenTerms={() => setLegalModal('terms')} onOpenPrivacy={() => setLegalModal('privacy')} />
+
+      {/* Legal Modal */}
+      {legalModal && (
+        <LegalModal type={legalModal} onClose={() => setLegalModal(null)} />
       )}
     </div>
   );

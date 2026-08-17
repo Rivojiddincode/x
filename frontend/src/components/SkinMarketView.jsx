@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link2, Tag, ShoppingCart, RefreshCw, CheckCircle2, AlertCircle, Lock, Zap } from 'lucide-react';
 import { API_BASE, authFetch } from '../api/client';
+import { requestNotificationPermission, notifyBackground } from '../utils/notifications';
 
 export function SkinMarketView({ user, onToast }) {
   const [subTab, setSubTab] = useState('shop'); // 'shop' | 'sell'
@@ -24,6 +25,7 @@ export function SkinMarketView({ user, onToast }) {
 
   useEffect(() => {
     fetchListings();
+    requestNotificationPermission();
   }, []);
 
   const fetchListings = async () => {
@@ -188,17 +190,20 @@ export function SkinMarketView({ user, onToast }) {
         if (data.status.startsWith('ESCROW')) {
           const until = data.escrowEndsAt ? new Date(data.escrowEndsAt).toLocaleDateString() : 'noma\'lum sana';
           onToast?.(`Bitim Steam escrow'ga tushdi — ${until}gacha kutish kerak (akkauntda Mobile Authenticator 7 kundan kam faol).`);
-          return; // escrow holatida keyingi tekshiruvni to'xtatamiz — muddat tugagach qayta tekshirib bo'lmaydi, admin/keyingi login orqali davom etadi
+          return;
         }
         if (data.status === 'COMPLETED') {
           onToast?.('✅ Bitim yakunlandi!');
+          notifyBackground('StarsCS', 'Bitimingiz yakunlandi! ✅');
           fetchListings();
           return;
         }
         if (data.status === 'FAILED' || data.status === 'NEEDS_ADMIN_REVIEW') {
-          onToast?.(data.status === 'NEEDS_ADMIN_REVIEW'
+          const msg = data.status === 'NEEDS_ADMIN_REVIEW'
             ? '⚠️ Xaridorga jo\'natib bo\'lmadi — pulingiz avtomatik qaytarildi.'
-            : '❌ Bitim muvaffaqiyatsiz: ' + (data.failReason || 'noma\'lum xato'));
+            : '❌ Bitim muvaffaqiyatsiz: ' + (data.failReason || 'noma\'lum xato');
+          onToast?.(msg);
+          notifyBackground('StarsCS', msg);
           return;
         }
         // Hali jarayonda — 5 soniyadan keyin qayta tekshiramiz

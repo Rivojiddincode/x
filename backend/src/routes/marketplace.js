@@ -6,6 +6,7 @@ import { PrismaClient } from '@prisma/client';
 import { fetchInventory, parseTradeUrl, isTradeUrlOwnedBySteamId, fetchMarketPrice, fetchFloatData } from '../services/inventory.js';
 import { requestItemFromSeller, sendItemToBuyer, onOfferStateChanged, isBotReady } from '../services/steamBot.js';
 import { requireAuth } from '../middleware/auth.js';
+import { sensitiveActionLimiter } from '../middleware/rateLimit.js';
 
 const prisma = new PrismaClient();
 const router = express.Router();
@@ -41,10 +42,8 @@ router.post('/trade-url', requireAuth, async (req, res) => {
   } catch (err) {
     console.error('[market/trade-url] Prisma xatosi:', err.message);
     if (err.code === 'P2025') {
-      // Prisma's "record not found" error — genuinely no such user
       return res.status(404).json({ success: false, message: 'Foydalanuvchi topilmadi (Steam orqali qaytadan kiring)' });
     }
-    // Any other error (missing column, DB connection issue, etc.) — surface the real reason
     return res.status(500).json({ success: false, message: 'Server xatosi: ' + err.message });
   }
 
@@ -86,7 +85,7 @@ router.get('/market-price', async (req, res) => {
 });
 
 // ---------------------------------------------------------
-// 2c. Berilgan item uchun float qiymati va paint seed (CSGOFloat ochiq API orqali)
+// 2c. Berilgan item uchun float qiymati va paint seed
 // ---------------------------------------------------------
 router.get('/float', async (req, res) => {
   const { inspectLink, assetId } = req.query;
@@ -107,7 +106,7 @@ router.get('/float', async (req, res) => {
 // ---------------------------------------------------------
 // 3. Sotuvga qo'yish (Listing yaratish)
 // ---------------------------------------------------------
-router.post('/listings', requireAuth, async (req, res) => {
+router.post('/listings', requireAuth, sensitiveActionLimiter, async (req, res) => {
   const sellerSteamId = req.user.steamId;
   const { assetId, classId, instanceId, marketHashName, iconUrl, price } = req.body;
 
@@ -157,11 +156,11 @@ router.get('/listings', async (req, res) => {
 });
 
 // ---------------------------------------------------------
-// 4b. Tezkor sotish (Instant Sell) — bozor narxining bir qismiga, darhol balansga
+// 4b. Tezkor sotish (Instant Sell)
 // ---------------------------------------------------------
-const INSTANT_SELL_RATE = 0.5; // bozor narxining 50%i darhol to'lanadi
+const INSTANT_SELL_RATE = 0.5;
 
-router.post('/instant-sell', requireAuth, async (req, res) => {
+router.post('/instant-sell', requireAuth, sensitiveActionLimiter, async (req, res) => {
   const sellerSteamId = req.user.steamId;
   const { assetId, classId, instanceId, marketHashName, iconUrl } = req.body;
 
@@ -182,9 +181,6 @@ router.post('/instant-sell', requireAuth, async (req, res) => {
 
   const instantPrice = Math.max(MIN_PRICE, Number((marketPrice * INSTANT_SELL_RATE).toFixed(2)));
 
-  // Item "SOLD" (yopiq) sifatida yaratiladi — chunki bu boshqa xaridorni kutmaydi,
-  // saytning o'zi (bot zaxirasi) uchun sotib olinadi. Keyinroq admin bu itemni botning
-  // o'z inventaridan qayta, to'liq narxda oddiy listing sifatida sotuvga qo'yishi mumkin.
   const listing = await prisma.skinListing.create({
     data: {
       sellerId: seller.id,
@@ -197,7 +193,7 @@ router.post('/instant-sell', requireAuth, async (req, res) => {
   const tx = await prisma.skinTransaction.create({
     data: {
       listingId: listing.id,
-      buyerId: seller.id, // instant-sell'da alohida xaridor yo'q — bot/sayt o'zi "xaridor"
+      buyerId: seller.id,
       sellerId: seller.id,
       price: instantPrice,
       status: 'AWAITING_SELLER_TRADE',
@@ -225,7 +221,7 @@ router.post('/instant-sell', requireAuth, async (req, res) => {
 // ---------------------------------------------------------
 // 5. Sotib olish — escrow oqimini boshlaydi
 // ---------------------------------------------------------
-router.post('/listings/:id/buy', requireAuth, async (req, res) => {
+router.post('/listings/:id/buy', requireAuth, sensitiveActionLimiter, async (req, res) => {
   const listingId = Number(req.params.id);
   const buyerSteamId = req.user.steamId;
 
@@ -253,7 +249,6 @@ router.post('/listings/:id/buy', requireAuth, async (req, res) => {
     return res.status(400).json({ success: false, message: 'O\'z itemingizni sotib ola olmaysiz' });
   }
 
-  // Balansni "hold" qilamiz (darhol yechib qo'yamiz — bitim bekor bo'lsa qaytaramiz)
   await prisma.user.update({
     where: { id: buyer.id },
     data: { balance: { decrement: listing.price } },
@@ -285,7 +280,6 @@ router.post('/listings/:id/buy', requireAuth, async (req, res) => {
       transactionId: tx.id,
     });
   } catch (err) {
-    // Bot so'rov yubora olmadi — balansni qaytaramiz, listing'ni tiklaymiz
     await prisma.user.update({ where: { id: buyer.id }, data: { balance: { increment: listing.price } } });
     await prisma.skinListing.update({ where: { id: listing.id }, data: { status: 'ACTIVE' } });
     await prisma.skinTransaction.update({
@@ -302,20 +296,13 @@ router.post('/listings/:id/buy', requireAuth, async (req, res) => {
 export function registerTradeStateWatcher() {
   onOfferStateChanged(async ({ offerId, newState, escrowEnds }) => {
     const ACCEPTED = 3;
-    const IN_ESCROW = 11; // TradeOfferManager.ETradeOfferState.InEscrow
+    const IN_ESCROW = 11;
 
-    // Steam ba'zan trade'ni to'g'ridan-to'g'ri "Accepted" qilmasdan, "InEscrow" holatiga
-    // o'tkazadi — bu ikkala tomonning ham Mobile Authenticator 7 kunlik shartini
-    // bajarmagani sababli bo'ladi (bizning bot tarafida emas). Buni jim qoldirish o'rniga,
-    // aniq status va kutish muddatini saqlaymiz, shunda foydalanuvchi nima bo'layotganini biladi.
     if (newState === IN_ESCROW) {
       const sellerTxEscrow = await prisma.skinTransaction.findFirst({
         where: { botToSellerTradeOfferId: String(offerId), status: 'AWAITING_SELLER_TRADE' },
       });
       if (sellerTxEscrow) {
-        // INSTANT-SELL bo'lsa: item ownership allaqachon botga o'tdi (escrow faqat botning
-        // uni QAYTA jo'natish huquqini cheklaydi, sotuvchidan olishni emas). Shuning uchun
-        // sotuvchiga darhol to'lash mumkin — item xavfsiz, faqat vaqtincha botda "band" holatda.
         if (sellerTxEscrow.buyerId === sellerTxEscrow.sellerId) {
           await prisma.$transaction([
             prisma.skinTransaction.update({
@@ -347,19 +334,15 @@ export function registerTradeStateWatcher() {
 
     if (newState !== ACCEPTED) return;
 
-    // Bu offer sotuvchidan bot tomon edimi?
     const sellerTx = await prisma.skinTransaction.findFirst({
       where: {
         botToSellerTradeOfferId: String(offerId),
-        status: { in: ['AWAITING_SELLER_TRADE', 'ESCROW_SELLER'] }, // escrow tugab, endi accepted bo'lgan holatni ham qamraydi
+        status: { in: ['AWAITING_SELLER_TRADE', 'ESCROW_SELLER'] },
       },
       include: { listing: true, buyer: true, seller: true },
     });
 
     if (sellerTx) {
-      // INSTANT-SELL holati: buyerId === sellerId bo'lsa, bu oddiy sotuv emas —
-      // bot itemni "zaxira" sifatida saqlaydi, xaridorga qayta jo'natish kerak emas,
-      // sotuvchi balansi darhol to'ldiriladi.
       if (sellerTx.buyerId === sellerTx.sellerId) {
         await prisma.$transaction([
           prisma.skinTransaction.update({ where: { id: sellerTx.id }, data: { status: 'COMPLETED' } }),
@@ -369,7 +352,6 @@ export function registerTradeStateWatcher() {
         return;
       }
 
-      // Oddiy sotuv: Bot itemni sotuvchidan oldi -> endi xaridorga jo'natamiz
       await prisma.skinTransaction.update({
         where: { id: sellerTx.id },
         data: { status: 'BOT_HOLDING_ITEM' },
@@ -384,11 +366,6 @@ export function registerTradeStateWatcher() {
           data: { status: 'AWAITING_BUYER_TRADE', botToBuyerTradeOfferId: String(buyerOfferId) },
         });
       } catch (err) {
-        // Xaridorga jo'natib bo'lmadi — item HALI HAM bot inventarida turibdi (yo'qolmagan!),
-        // lekin Botirning puli allaqachon "hold" qilingan edi. Buni qaytarib berish shart,
-        // aks holda pul yo'qolib qoladi. Item admin tomonidan qo'lda ko'rib chiqilishi kerak
-        // ('NEEDS_ADMIN_REVIEW' — bot inventarida "qolib ketgan" item, deyarli har doim
-        // xaridorning o'z akkaunt cheklovi tufayli sodir bo'ladi, masalan trade-restricted holat).
         await prisma.$transaction([
           prisma.skinTransaction.update({
             where: { id: sellerTx.id },
@@ -396,12 +373,11 @@ export function registerTradeStateWatcher() {
           }),
           prisma.user.update({ where: { id: sellerTx.buyerId }, data: { balance: { increment: sellerTx.price } } }),
         ]);
-        console.error(`[market] Bitim #${sellerTx.id}: item bot inventarida qoldi, xaridorga pul qaytarildi. Admin tekshiruvi kerak.`);
+        console.error(`[market] Bitim #${sellerTx.id}: item bot inventarida qoldi, xaridorga pul qaytarildi.`);
       }
       return;
     }
 
-    // Bu offer bot -> xaridor edimi?
     const buyerTx = await prisma.skinTransaction.findFirst({
       where: {
         botToBuyerTradeOfferId: String(offerId),
@@ -411,7 +387,6 @@ export function registerTradeStateWatcher() {
     });
 
     if (buyerTx) {
-      // Bitim yakunlandi — sotuvchi balansini to'ldiramiz, listing'ni SOLD qilamiz
       await prisma.$transaction([
         prisma.skinTransaction.update({ where: { id: buyerTx.id }, data: { status: 'COMPLETED' } }),
         prisma.skinListing.update({ where: { id: buyerTx.listingId }, data: { status: 'SOLD' } }),
@@ -422,7 +397,7 @@ export function registerTradeStateWatcher() {
 }
 
 // ---------------------------------------------------------
-// 7. Bitim holatini tekshirish (frontend shu orqali "escrow'da" holatini ko'rsatadi)
+// 7. Bitim holatini tekshirish
 // ---------------------------------------------------------
 router.get('/transactions/:id', async (req, res) => {
   const tx = await prisma.skinTransaction.findUnique({
@@ -455,11 +430,8 @@ router.get('/transactions/:id', async (req, res) => {
 export default router;
 
 // ---------------------------------------------------------
-// Escrow tugagan (real, ikkinchi xaridorli) bitimlarni avtomatik davom ettirish
+// Escrow tugagan bitimlarni avtomatik davom ettirish
 // ---------------------------------------------------------
-// Steam escrow tugaganda alohida signal yubormaydi — shuning uchun har 15 daqiqada
-// escrowEndsAt vaqti o'tgan ESCROW_SELLER bitimlarni tekshirib, xaridorga jo'natishga
-// urinamiz. (Instant-sell'ga tegishli emas — u escrow boshlanishi bilanoq to'lanadi.)
 export function startEscrowReleaseChecker() {
   setInterval(async () => {
     const dueTransactions = await prisma.skinTransaction.findMany({
@@ -476,8 +448,7 @@ export function startEscrowReleaseChecker() {
         });
       } catch (err) {
         console.error(`[market] Escrow tugagan bitim #${tx.id}ni xaridorga jo'natishda xato:`, err.message);
-        // Keyingi tekshiruvda qayta urinib ko'ramiz — status o'zgartirmaymiz
       }
     }
-  }, 15 * 60 * 1000); // 15 daqiqada bir
+  }, 15 * 60 * 1000);
 }

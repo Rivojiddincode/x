@@ -5,20 +5,21 @@
   "scripts": {
     "dev": "node src/server.js",
     "start": "node src/server.js",
-    "db:push": "npx prisma db push",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "db:push": "npx prisma db push"
   },
   "dependencies": {
-    "@csfloat/cs2-inspect-serializer": "^1.1.6",
     "@prisma/client": "^5.22.0",
     "cors": "^2.8.6",
     "dotenv": "^16.6.1",
     "express": "^4.22.2",
     "jsonwebtoken": "^9.0.3",
-    "steam-totp": "^2.1.2",
-    "steam-tradeoffer-manager": "^2.10.0",
     "steam-user": "^5.0.0",
-    "steamcommunity": "^3.47.0"
+    "steamcommunity": "^3.47.0",
+    "steam-tradeoffer-manager": "^2.10.0",
+    "steam-totp": "^2.1.2",
+    "@csfloat/cs2-inspect-serializer": "^1.1.6",
+    "express-rate-limit": "^7.4.1"
   },
   "devDependencies": {
     "prisma": "^5.8.0"
