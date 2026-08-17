@@ -572,3 +572,12 @@ body {
 
 /* Toast */
 .toast { position: fixed; bottom: 24px; right: 24px; background: var(--card-bg); border-left: 4px solid var(--green); padding: 14px 20px; border-radius: 8px; color: #fff; font-weight: 600; box-shadow: 0 10px 30px rgba(0,0,0,0.5); z-index: 3000; }
+
+/* Admin panel — loading spinner */
+.spin {
+  animation: spin-rotate 1s linear infinite;
+  color: var(--span);
+}
+@keyframes spin-rotate {
+  to { transform: rotate(360deg); }
+}

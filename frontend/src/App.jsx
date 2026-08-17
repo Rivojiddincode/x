@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { apiClient, API_BASE } from './api/client';
+import { apiClient, API_BASE, authFetch } from './api/client';
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
 import { ServerList } from './components/ServerList';
@@ -8,6 +8,7 @@ import { LeaderboardView } from './components/LeaderboardView';
 import { BansView, RequestsView } from './components/BansView';
 import { ProfileView } from './components/ProfileView';
 import { SkinMarketView } from './components/SkinMarketView';
+import { AdminView } from './components/AdminView';
 import './styles/main.css';
 
 export default function App() {
@@ -19,6 +20,7 @@ export default function App() {
   const [leaderboard, setLeaderboard] = useState([]);
   const [bans, setBans] = useState([]);
   const [toast, setToast] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   
   // Modals
   const [showPaymeModal, setShowPaymeModal] = useState(false);
@@ -107,6 +109,15 @@ export default function App() {
     setToast(msg);
     setTimeout(() => setToast(null), 4000);
   };
+
+  // Foydalanuvchi kirgan/o'zgargan sari admin huquqini tekshiramiz (faqat UX uchun —
+  // haqiqiy himoya backend'da requireAdmin orqali)
+  useEffect(() => {
+    if (!user) { setIsAdmin(false); return; }
+    authFetch('/admin/check')
+      .then((d) => setIsAdmin(!!d.isAdmin))
+      .catch(() => setIsAdmin(false));
+  }, [user?.steamId]);
 
   const handleLogout = () => {
     setUser(null);
@@ -238,6 +249,7 @@ export default function App() {
         onOpenPayme={() => { setPaymeSteamId(user?.steamId || ''); setShowPaymeModal(true); }}
         onOpenSteam={handleSteamLogin}
         user={user}
+        isAdmin={isAdmin}
       />
 
       {/* Hero Section - ONLY rendered on the main servers page */}
@@ -276,6 +288,10 @@ export default function App() {
             onOpenPayme={() => { setPaymeSteamId(user?.steamId || ''); setShowPaymeModal(true); }} 
             setActiveTab={setActiveTab}
           />
+        )}
+
+        {activeTab === 'admin' && isAdmin && (
+          <AdminView onToast={showToastMsg} />
         )}
 
         {activeTab === 'bans' && (

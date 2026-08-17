@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { Gamepad2, ShoppingBag, Trophy, Gift, ShieldAlert, MessageSquare, Wallet, ChevronDown, User } from 'lucide-react';
+import { Gamepad2, ShoppingBag, Trophy, Gift, ShieldAlert, MessageSquare, Wallet, ChevronDown, User, ShieldCheck } from 'lucide-react';
 import { SpartanLogo } from './SpartanLogo';
 import { CrossedCSGuns } from './CrossedCSGuns';
 
-export default function Navbar({ activeTab, setActiveTab, totalOnline, onOpenPayme, onOpenSteam, user }) {
+export default function Navbar({ activeTab, setActiveTab, totalOnline, onOpenPayme, onOpenSteam, user, isAdmin }) {
   const [showMoreMenu, setShowMoreMenu] = useState(false);
 
   return (
@@ -43,6 +43,11 @@ export default function Navbar({ activeTab, setActiveTab, totalOnline, onOpenPay
           <button className={`nav-btn ${activeTab === 'profile' ? 'active' : ''}`} onClick={() => setActiveTab('profile')}>
             <User size={15} /> Profil
           </button>
+          {isAdmin && (
+            <button className={`nav-btn ${activeTab === 'admin' ? 'active' : ''}`} onClick={() => setActiveTab('admin')} style={{ color: 'var(--red)' }}>
+              <ShieldCheck size={15} /> Admin
+            </button>
+          )}
 
           {/* More Dropdown Menu */}
           <div className="nav-dropdown-wrapper" onMouseEnter={() => setShowMoreMenu(true)} onMouseLeave={() => setShowMoreMenu(false)}>
