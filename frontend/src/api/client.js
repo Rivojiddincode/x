@@ -51,9 +51,17 @@ export const apiClient = {
     return res.data;
   },
 
-  async createPaymeCharge(data) {
-    const res = await axios.post(`${API_BASE}/payments/payme/create`, data);
-    return res.data;
+  async createInpayCharge(data) {
+    // data: { amount, paymentMethod? }
+    // Auth token authFetch orqali avtomatik qo'shiladi
+    return authFetch('/payments/inpay/create', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  async getPaymentStatus(orderId) {
+    return authFetch(`/payments/inpay/status/${orderId}`);
   },
 
   async authenticateSteam() {

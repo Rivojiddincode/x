@@ -25,10 +25,12 @@ export default function App() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [legalModal, setLegalModal] = useState(null); // null | 'terms' | 'privacy'
   
-  // Modals
-  const [showPaymeModal, setShowPaymeModal] = useState(false);
-  const [paymeAmount, setPaymeAmount] = useState(50000);
-  const [paymeSteamId, setPaymeSteamId] = useState('');
+  // inPAY Modal State
+  const [showInpayModal, setShowInpayModal] = useState(false);
+  const [inpayAmount, setInpayAmount] = useState(50000);
+  const [inpayMethod, setInpayMethod] = useState(''); // '' = foydalanuvchi tanlaydi
+  const [inpayLoading, setInpayLoading] = useState(false);
+  const [inpayError, setInpayError] = useState('');
 
   // Persistent User State from localStorage
   const [user, setUser] = useState(() => {
@@ -165,16 +167,27 @@ export default function App() {
     }
   };
 
-  const handlePaymeSubmit = async (e) => {
+  const handleInpaySubmit = async (e) => {
     e.preventDefault();
+    if (!user) return;
+    setInpayLoading(true);
+    setInpayError('');
     try {
-      const res = await apiClient.createPaymeCharge({ steamId: paymeSteamId, amount: paymeAmount });
-      if (res.success) {
-        showToastMsg(`Payme gateway silkasi: ${res.checkoutUrl.slice(0, 45)}...`);
-        setShowPaymeModal(false);
+      const res = await apiClient.createInpayCharge({
+        amount: Number(inpayAmount),
+        paymentMethod: inpayMethod || undefined,
+      });
+      if (res.success && res.payUrl) {
+        // order_id ni localStorage'ga saqlaymiz — foydalanuvchi qaytganda polling qilamiz
+        localStorage.setItem('starscs_pending_order', res.orderId);
+        window.location.href = res.payUrl;
+      } else {
+        setInpayError(res.message || "To'lov yaratishda xatolik");
       }
-    } catch (e) {
-      showToastMsg('Payme to\'lov xatoligi yuz berdi');
+    } catch (err) {
+      setInpayError("Serverga ulanib bo'lmadi");
+    } finally {
+      setInpayLoading(false);
     }
   };
 
@@ -190,17 +203,18 @@ export default function App() {
         setUser((prev) => ({ ...prev, balance: res.user.balance, vipRole: res.user.vipRole }));
         localStorage.setItem('starscs_user', JSON.stringify({ ...user, balance: res.user.balance, vipRole: res.user.vipRole }));
       } else if (res.needsTopUp) {
-        showToastMsg(res.message + ' — balansni to\'ldiring.');
-        setPaymeAmount(res.shortfall);
-        setPaymeSteamId(user.steamId);
-        setShowPaymeModal(true);
+        showToastMsg(res.message + " — balansni to'ldiring.");
+        setInpayAmount(res.shortfall);
+        setInpayError('');
+        setShowInpayModal(true);
       } else {
-        showToastMsg(res.message || 'Xarid qilib bo\'lmadi');
+        showToastMsg(res.message || "Xarid qilib bo'lmadi");
       }
     } catch (e) {
-      showToastMsg('Serverga ulanib bo\'lmadi');
+      showToastMsg("Serverga ulanib bo'lmadi");
     }
   };
+
 
   const handleSteamLogin = async () => {
     try {
@@ -239,7 +253,7 @@ export default function App() {
         activeTab={activeTab} 
         setActiveTab={setActiveTab} 
         totalOnline={totalOnline}
-        onOpenPayme={() => { setPaymeSteamId(user?.steamId || ''); setShowPaymeModal(true); }}
+        onOpenPayme={() => { setInpayError(''); setShowInpayModal(true); }}
         onOpenSteam={handleSteamLogin}
         user={user}
         isAdmin={isAdmin}
@@ -271,7 +285,7 @@ export default function App() {
           <ProfileView 
             user={user} 
             onLogout={handleLogout} 
-            onOpenPayme={() => { setPaymeSteamId(user?.steamId || ''); setShowPaymeModal(true); }} 
+            onOpenPayme={() => { setInpayError(''); setShowInpayModal(true); }} 
             setActiveTab={setActiveTab}
           />
         )}
@@ -290,24 +304,106 @@ export default function App() {
         )}
       </main>
 
-      {/* Payme Checkout Modal */}
-      {showPaymeModal && (
+      {/* inPAY Checkout Modal */}
+      {showInpayModal && (
         <div className="modal">
           <div className="modal-box">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h3>⭐ StarsCS Payme Balansni To'ldirish</h3>
-              <button style={{ background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer', fontSize: '18px' }} onClick={() => setShowPaymeModal(false)}>✕</button>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+                <span style={{ fontSize: '20px' }}>💳</span> Balansni To'ldirish
+              </h3>
+              <button
+                style={{ background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer', fontSize: '18px' }}
+                onClick={() => setShowInpayModal(false)}
+              >✕</button>
             </div>
-            <form onSubmit={handlePaymeSubmit}>
-              <div>
-                <label style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Steam ID</label>
-                <input className="form-input" value={paymeSteamId} onChange={e => setPaymeSteamId(e.target.value)} required />
+
+            <form onSubmit={handleInpaySubmit}>
+              {/* To'lov usuli */}
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block', marginBottom: '8px' }}>
+                  To'lov usuli
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+                  {[{ value: '', label: '🏪 Tanlash' }, { value: 'click', label: '🟦 Click' }, { value: 'payme', label: '🔵 Payme' }, { value: 'cardsystem', label: '💳 Karta' }].map(opt => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setInpayMethod(opt.value)}
+                      style={{
+                        padding: '10px 6px',
+                        borderRadius: '8px',
+                        border: `1.5px solid ${inpayMethod === opt.value ? 'var(--span)' : 'var(--card-border)'}`,
+                        background: inpayMethod === opt.value ? 'rgba(var(--span-rgb, 99,102,241),0.15)' : 'var(--card-bg)',
+                        color: inpayMethod === opt.value ? 'var(--span)' : 'var(--text-muted)',
+                        cursor: 'pointer',
+                        fontSize: '12px',
+                        fontWeight: inpayMethod === opt.value ? '700' : '400',
+                        transition: 'all 0.15s',
+                      }}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
               </div>
-              <div style={{ marginTop: '12px' }}>
-                <label style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Summa (UZS)</label>
-                <input className="form-input" type="number" value={paymeAmount} onChange={e => setPaymeAmount(e.target.value)} required />
+
+              {/* Summa */}
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>
+                  Summa (UZS) — minimum 1 000
+                </label>
+                <input
+                  className="form-input"
+                  type="number"
+                  min="1000"
+                  step="1000"
+                  value={inpayAmount}
+                  onChange={e => setInpayAmount(e.target.value)}
+                  required
+                />
+                {/* Tezkor summa tugmalari */}
+                <div style={{ display: 'flex', gap: '6px', marginTop: '8px', flexWrap: 'wrap' }}>
+                  {[20000, 50000, 100000, 200000].map(amt => (
+                    <button
+                      key={amt}
+                      type="button"
+                      onClick={() => setInpayAmount(amt)}
+                      style={{
+                        padding: '4px 10px',
+                        borderRadius: '6px',
+                        border: '1px solid var(--card-border)',
+                        background: 'var(--card-bg)',
+                        color: 'var(--text-muted)',
+                        cursor: 'pointer',
+                        fontSize: '11px',
+                      }}
+                    >
+                      {amt.toLocaleString()}
+                    </button>
+                  ))}
+                </div>
               </div>
-              <button type="submit" className="btn btn-wallet" style={{ width: '100%', marginTop: '20px' }}>Payme To'loviga O'tish</button>
+
+              {/* Xatolik */}
+              {inpayError && (
+                <p style={{ color: '#ff4444', fontSize: '13px', marginBottom: '12px', background: '#ff44441a', padding: '8px 12px', borderRadius: '8px' }}>
+                  ⚠️ {inpayError}
+                </p>
+              )}
+
+              <button
+                type="submit"
+                className="btn btn-wallet"
+                disabled={inpayLoading}
+                style={{ width: '100%', marginTop: '4px', opacity: inpayLoading ? 0.7 : 1 }}
+              >
+                {inpayLoading ? '⏳ Yuklanmoqda...' : `💳 To'lovga O'tish — ${Number(inpayAmount).toLocaleString()} UZS`}
+              </button>
+
+              <p style={{ textAlign: 'center', fontSize: '11px', color: 'var(--text-muted)', marginTop: '12px' }}>
+                inPAY orqali xavfsiz to'lov • Click • Payme • Bank kartasi
+              </p>
             </form>
           </div>
         </div>

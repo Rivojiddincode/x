@@ -8,11 +8,17 @@ import { startBot } from './services/steamBot.js';
 import { generateToken, requireAuth } from './middleware/auth.js';
 import vipRouter, { VIP_TIERS } from './routes/vip.js';
 import adminRouter from './routes/admin.js';
+import paymentsRouter from './routes/payments.js';
 import { generalLimiter, authLimiter } from './middleware/rateLimit.js';
 
 const prisma = new PrismaClient();
 
 const app = express();
+
+// Trust the first proxy hop (Render, nginx, etc.) so that express-rate-limit
+// can read the real client IP from the X-Forwarded-For header correctly.
+app.set('trust proxy', 1);
+
 const PORT = process.env.PORT || 5000;
 const STEAM_API_KEY = process.env.STEAM_API_KEY;
 
@@ -34,6 +40,9 @@ app.use('/api/v1/vip', vipRouter);
 
 // Admin panel routes (requires auth + admin check inside the router)
 app.use('/api/v1/admin', adminRouter);
+
+// inPAY to'lov routes (create invoice, webhook, status polling)
+app.use('/api/v1/payments/inpay', paymentsRouter);
 
 // Health check
 app.get('/api/v1/health', (req, res) => {
@@ -137,24 +146,13 @@ app.post('/api/v1/requests', async (req, res) => {
   }
 });
 
-// Payme Top-Up Merchant URL Generator & Checkout
+// [Legacy] Payme stub — backwards compatibility uchun qoldirildi.
+// Yangi integratsiya uchun POST /api/v1/payments/inpay/create dan foydalaning.
 app.post('/api/v1/payments/payme/create', (req, res) => {
-  const { steamId, amount, promo } = req.body;
-  if (!steamId || !amount || amount < 1000) {
-    return res.status(400).json({ success: false, message: 'Yaroqsiz Steam ID yoki summa' });
-  }
-  
-  const paymentId = `PAYME-${Date.now()}`;
-  const checkoutUrl = `https://payme.uz/fallback/merchant/?id=69eb58c2229f5694d603f48d&amount=${amount * 100}&account[steamId]=${steamId}`;
-  
-  db.payments.push({ id: paymentId, steamId, amount, promo, status: 'PENDING', createdAt: new Date() });
-  
-  res.json({
-    success: true,
-    paymentId,
-    amount,
-    checkoutUrl,
-    message: 'Payme to\'lov ssilkasi muvaffaqiyatli yaratildi!'
+  res.status(410).json({
+    success: false,
+    message: "Bu endpoint eskirgan. Iltimos /api/v1/payments/inpay/create dan foydalaning.",
+    error_code: 'DEPRECATED',
   });
 });
 

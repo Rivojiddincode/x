@@ -134,3 +134,19 @@ model SkinTransaction {
   createdAt               DateTime @default(now())
   updatedAt               DateTime @updatedAt
 }
+
+// -------------------------------------------------------
+// INPAY TO'LOV BUYURTMALARI
+// -------------------------------------------------------
+
+model PaymentOrder {
+  id            Int      @id @default(autoincrement())
+  orderId       String   @unique  // inPAY order_id (hex string)
+  steamId       String            // User.steamId (FK sifatida emas — user yo'q holda ham saqlansin)
+  amount        Float             // UZS
+  status        String   @default("pending") // pending | success | failed | cancelled
+  paymentMethod String?           // click | payme | cardsystem | null (foydalanuvchi tanlagan)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
