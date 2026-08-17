@@ -169,7 +169,10 @@ export default function App() {
 
   const handleInpaySubmit = async (e) => {
     e.preventDefault();
-    if (!user) return;
+    if (!user) {
+      setInpayError("Avval Steam orqali tizimga kiring!");
+      return;
+    }
     setInpayLoading(true);
     setInpayError('');
     try {
@@ -178,14 +181,14 @@ export default function App() {
         paymentMethod: inpayMethod || undefined,
       });
       if (res.success && res.payUrl) {
-        // order_id ni localStorage'ga saqlaymiz — foydalanuvchi qaytganda polling qilamiz
         localStorage.setItem('starscs_pending_order', res.orderId);
         window.location.href = res.payUrl;
       } else {
         setInpayError(res.message || "To'lov yaratishda xatolik");
       }
     } catch (err) {
-      setInpayError("Serverga ulanib bo'lmadi");
+      // Render bepul plan'da server uxlab qoladi — birinchi so'rovda 30-60s kechikish bo'ladi
+      setInpayError("Server javob bermadi. Iltimos 30 soniya kuting va qayta urining.");
     } finally {
       setInpayLoading(false);
     }
