@@ -6,7 +6,7 @@ import { db } from './services/db.js';
 import marketRouter, { registerTradeStateWatcher, startEscrowReleaseChecker } from './routes/marketplace.js';
 import { startBot } from './services/steamBot.js';
 import { generateToken, requireAuth } from './middleware/auth.js';
-import vipRouter from './routes/vip.js';
+import vipRouter, { VIP_TIERS } from './routes/vip.js';
 
 const prisma = new PrismaClient();
 
@@ -50,36 +50,85 @@ app.get('/api/v1/servers', (req, res) => {
   res.json({ success: true, totalOnline, servers: result });
 });
 
-// Store API
+// Store API — VIP tariflari endi vip.js'dagi yagona manbadan keladi (narx mos kelmasligi bo'lmaydi)
 app.get('/api/v1/store', (req, res) => {
-  res.json({ success: true, items: db.storeItems });
+  const tiers = Object.entries(VIP_TIERS).map(([id, t]) => ({ id, ...t }));
+  res.json({ success: true, items: tiers });
 });
 
-// Leaderboard API
-app.get('/api/v1/leaderboard', (req, res) => {
+// Leaderboard API — endi haqiqiy Prisma User jadvalidan, score bo'yicha saralangan
+function levelToBadge(level) {
+  if (level >= 40) return 'Diamond';
+  if (level >= 25) return 'Gold';
+  if (level >= 10) return 'Silver';
+  return 'Bronze';
+}
+
+app.get('/api/v1/leaderboard', async (req, res) => {
   const { search } = req.query;
-  let result = db.leaderboard;
-  if (search) {
-    const q = search.toLowerCase();
-    result = result.filter(p => p.name.toLowerCase().includes(q) || p.rankBadge.toLowerCase().includes(q));
+  try {
+    const users = await prisma.user.findMany({
+      where: search ? { displayName: { contains: search, mode: 'insensitive' } } : undefined,
+      orderBy: { score: 'desc' },
+      take: 100,
+    });
+
+    const players = users.map((u, i) => ({
+      rank: i + 1,
+      name: u.displayName,
+      kills: u.kills,
+      deaths: u.deaths,
+      kd: u.deaths > 0 ? (u.kills / u.deaths).toFixed(2) : u.kills.toFixed(2),
+      headshots: `${u.headshotPct.toFixed(0)}%`,
+      winRate: `${u.winRate.toFixed(0)}%`,
+      rankBadge: levelToBadge(u.level),
+    }));
+
+    res.json({ success: true, players });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
-  res.json({ success: true, players: result });
 });
 
-// Bans API
-app.get('/api/v1/bans', (req, res) => {
-  res.json({ success: true, bans: db.bans });
+// Bans API — endi haqiqiy Prisma BanRecord jadvalidan
+app.get('/api/v1/bans', async (req, res) => {
+  try {
+    const records = await prisma.banRecord.findMany({
+      include: { user: true },
+      orderBy: { createdAt: 'desc' },
+      take: 100,
+    });
+
+    const bans = records.map((b) => ({
+      id: b.id,
+      name: b.user.displayName,
+      steamId: b.user.steamId,
+      date: b.createdAt.toISOString().slice(0, 10),
+      admin: b.bannedBy,
+      reason: b.reason,
+      status: (!b.expiresAt || new Date(b.expiresAt) > new Date()) ? 'Active' : 'Expired',
+    }));
+
+    res.json({ success: true, bans });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
 });
 
 // Submit Request (Admin apply / Unban appeal)
-app.post('/api/v1/requests', (req, res) => {
+app.post('/api/v1/requests', async (req, res) => {
   const { name, telegram, type, message } = req.body;
   if (!name || !telegram || !message) {
     return res.status(400).json({ success: false, message: 'Barcha maydonlarni to\'ldiring' });
   }
-  const ticket = { id: Date.now(), name, telegram, type, message, createdAt: new Date() };
-  db.requests.push(ticket);
-  res.json({ success: true, message: 'Murojaatingiz qabul qilindi!', ticket });
+  try {
+    const ticket = await prisma.requestTicket.create({
+      data: { name, telegram, type: type || 'other', message },
+    });
+    res.json({ success: true, message: 'Murojaatingiz qabul qilindi!', ticket });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
 });
 
 // Payme Top-Up Merchant URL Generator & Checkout

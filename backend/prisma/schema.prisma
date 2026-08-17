@@ -16,11 +16,30 @@ model User {
   vipRole      String   @default("PLAYER")
   vipExpiresAt String?
   tradeUrl     String?
+  // Leaderboard uchun statistika — hozircha qo'lda/admin orqali yangilanadi,
+  // kelajakda real CS2 serverdan (SourceMod plugin -> API) avtomatik keladi
+  kills        Int      @default(0)
+  deaths       Int      @default(0)
+  score        Int      @default(0)
+  level        Int      @default(1)
+  headshotPct  Float    @default(0)
+  winRate      Float    @default(0)
   createdAt    DateTime @default(now())
   orders       Order[]
   sellingListings SkinListing[]    @relation("SellerListings")
   purchases       SkinTransaction[] @relation("BuyerTransactions")
   sales           SkinTransaction[] @relation("SellerTransactions")
+  ban             BanRecord?
+}
+
+model BanRecord {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @unique
+  user      User     @relation(fields: [userId], references: [id])
+  reason    String
+  bannedBy  String   @default("Admin")
+  expiresAt DateTime? // null = doimiy (permanent) ban
+  createdAt DateTime @default(now())
 }
 
 model GameServer {
