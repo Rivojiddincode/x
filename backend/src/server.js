@@ -7,6 +7,7 @@ import marketRouter, { registerTradeStateWatcher, startEscrowReleaseChecker } fr
 import { startBot } from './services/steamBot.js';
 import { generateToken, requireAuth } from './middleware/auth.js';
 import vipRouter, { VIP_TIERS } from './routes/vip.js';
+import adminRouter from './routes/admin.js';
 
 const prisma = new PrismaClient();
 
@@ -28,6 +29,9 @@ app.use('/api/v1/market', marketRouter);
 
 // VIP purchase routes
 app.use('/api/v1/vip', vipRouter);
+
+// Admin panel routes (requires auth + admin check inside the router)
+app.use('/api/v1/admin', adminRouter);
 
 // Health check
 app.get('/api/v1/health', (req, res) => {
