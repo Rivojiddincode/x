@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link2, Tag, ShoppingCart, RefreshCw, CheckCircle2, AlertCircle, Lock, Zap } from 'lucide-react';
+import { Link2, Tag, ShoppingCart, RefreshCw, CheckCircle2, AlertCircle, Lock, Zap, Search } from 'lucide-react';
 import { API_BASE, authFetch } from '../api/client';
 import { requestNotificationPermission, notifyBackground } from '../utils/notifications';
 
@@ -288,51 +288,117 @@ export function SkinMarketView({ user, onToast }) {
   );
 }
 
+const SORT_OPTIONS = [
+  { value: 'newest', label: 'Yangi qo\'shilganlar' },
+  { value: 'price_asc', label: 'Narx: Arzondan qimmatga' },
+  { value: 'price_desc', label: 'Narx: Qimmatdan arzonga' },
+  { value: 'name_asc', label: 'Nomi: A → Z' },
+  { value: 'name_desc', label: 'Nomi: Z → A' },
+];
+
+// marketHashName'dagi kalit so'zlarga qarab taxminiy "rarity" rangini aniqlaydi —
+// backend'da alohida rarity maydoni yo'q, shuning uchun nom ichidan chiqarib olamiz.
+function getRarityAccent(name = '') {
+  const n = name.toLowerCase();
+  if (n.startsWith('★') || n.includes('knife') || n.includes('gloves') || n.includes('bayonet') || n.includes('karambit')) {
+    return { color: '#e4ae39', label: 'Pichoq/Qo\'lqop' }; // Gold — knife/glove tier
+  }
+  if (n.includes('stattrak')) {
+    return { color: '#cf6a32', label: 'StatTrak™' }; // Orange
+  }
+  if (n.includes('souvenir')) {
+    return { color: '#ffd700', label: 'Souvenir' };
+  }
+  return { color: '#4b69ff', label: 'Restricted+' }; // Default blue-ish (Steam classified/restricted family)
+}
+
 function ShopTab({ listings, loading, onBuy, buyingId, onRefresh }) {
+  const [search, setSearch] = useState('');
+  const [sortBy, setSortBy] = useState('newest');
+
+  const visibleListings = React.useMemo(() => {
+    let result = listings;
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      result = result.filter((l) => l.marketHashName.toLowerCase().includes(q));
+    }
+    const sorted = [...result];
+    switch (sortBy) {
+      case 'price_asc': sorted.sort((a, b) => a.price - b.price); break;
+      case 'price_desc': sorted.sort((a, b) => b.price - a.price); break;
+      case 'name_asc': sorted.sort((a, b) => a.marketHashName.localeCompare(b.marketHashName)); break;
+      case 'name_desc': sorted.sort((a, b) => b.marketHashName.localeCompare(a.marketHashName)); break;
+      default: sorted.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)); // newest
+    }
+    return sorted;
+  }, [listings, search, sortBy]);
+
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-        <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
-          Barcha narxlar sobit — tasodifiy natijaga asoslangan xarid mavjud emas.
-        </p>
+      <div className="shop-toolbar">
+        <div className="shop-search">
+          <Search size={15} className="shop-search-icon" />
+          <input
+            placeholder="Skin nomi bo'yicha qidirish..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+        <select className="shop-sort-select" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+          {SORT_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          ))}
+        </select>
         <button className="btn btn-steam" onClick={onRefresh}>
           <RefreshCw size={14} /> Yangilash
         </button>
       </div>
 
+      <p style={{ color: 'var(--text-muted)', fontSize: '12px', margin: '10px 0 16px' }}>
+        Barcha narxlar sobit — tasodifiy natijaga asoslangan xarid mavjud emas. {visibleListings.length} ta natija.
+      </p>
+
       {loading ? (
         <p style={{ color: 'var(--text-muted)' }}>Yuklanmoqda...</p>
-      ) : listings.length === 0 ? (
+      ) : visibleListings.length === 0 ? (
         <div className="card" style={{ textAlign: 'center', padding: '40px' }}>
-          <p style={{ color: 'var(--text-muted)' }}>Hozircha sotuvda skin yo'q. Birinchi bo'lib siz sotuvga qo'ying!</p>
+          <p style={{ color: 'var(--text-muted)' }}>
+            {listings.length === 0
+              ? "Hozircha sotuvda skin yo'q. Birinchi bo'lib siz sotuvga qo'ying!"
+              : 'Qidiruvingizga mos skin topilmadi.'}
+          </p>
         </div>
       ) : (
         <div className="grid">
-          {listings.map((listing) => (
-            <div key={listing.id} className="card">
-              <div style={{ height: '110px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.25)', borderRadius: '8px', marginBottom: '12px' }}>
-                {listing.iconUrl ? (
-                  <img src={listing.iconUrl} alt={listing.marketHashName} style={{ maxHeight: '90%', maxWidth: '90%' }} />
-                ) : (
-                  <Tag size={32} color="var(--text-muted)" />
-                )}
+          {visibleListings.map((listing) => {
+            const rarity = getRarityAccent(listing.marketHashName);
+            return (
+              <div key={listing.id} className="skin-card" style={{ '--rarity-color': rarity.color }}>
+                <div className="skin-card-bar" />
+                <div className="skin-card-thumb">
+                  {listing.iconUrl ? (
+                    <img src={listing.iconUrl} alt={listing.marketHashName} />
+                  ) : (
+                    <Tag size={32} color="var(--text-muted)" />
+                  )}
+                </div>
+                <h3 className="skin-card-name" title={listing.marketHashName}>{listing.marketHashName}</h3>
+                <p className="skin-card-seller">
+                  Sotuvchi: {listing.seller?.displayName || 'Noma\'lum'}
+                </p>
+                <div className="skin-card-footer">
+                  <span className="skin-card-price">${listing.price.toFixed(2)}</span>
+                  <button
+                    className="btn btn-wallet"
+                    disabled={buyingId === listing.id}
+                    onClick={() => onBuy(listing)}
+                  >
+                    {buyingId === listing.id ? 'Yuborilmoqda...' : 'Sotib olish'}
+                  </button>
+                </div>
               </div>
-              <h3 className="card-title" style={{ fontSize: '14px' }}>{listing.marketHashName}</h3>
-              <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '4px 0 12px' }}>
-                Sotuvchi: {listing.seller?.displayName || 'Noma\'lum'}
-              </p>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: '20px', fontWeight: '800', color: 'var(--money)' }}>${listing.price.toFixed(2)}</span>
-                <button
-                  className="btn btn-wallet"
-                  disabled={buyingId === listing.id}
-                  onClick={() => onBuy(listing)}
-                >
-                  {buyingId === listing.id ? 'Yuborilmoqda...' : 'Sotib olish'}
-                </button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

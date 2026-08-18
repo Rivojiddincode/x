@@ -581,3 +581,146 @@ body {
 @keyframes spin-rotate {
   to { transform: rotate(360deg); }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   Skin Market — qidiruv/saralash paneli va karta dizayni
+═══════════════════════════════════════════════════════════════ */
+.shop-toolbar {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.shop-search {
+  position: relative;
+  flex: 1;
+  min-width: 220px;
+}
+.shop-search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  pointer-events: none;
+}
+.shop-search input {
+  width: 100%;
+  padding: 10px 12px 10px 36px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--card-border);
+  color: #fff;
+  font-size: 13px;
+  transition: border-color 0.15s ease;
+}
+.shop-search input:focus {
+  outline: none;
+  border-color: var(--span);
+}
+
+.shop-sort-select {
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--card-border);
+  color: #fff;
+  font-size: 13px;
+  cursor: pointer;
+  min-width: 200px;
+}
+.shop-sort-select:focus {
+  outline: none;
+  border-color: var(--span);
+}
+
+/* Skin karta */
+.skin-card {
+  position: relative;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius);
+  padding: 14px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+.skin-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--rarity-color, var(--span));
+  box-shadow: 0 14px 30px -14px var(--rarity-color, var(--span-glow));
+}
+
+/* Yuqoridagi rarity rang chizig'i */
+.skin-card-bar {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: var(--rarity-color, var(--span));
+}
+
+/* Rasm bloki */
+.skin-card-thumb {
+  height: 108px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 8px;
+  margin-bottom: 12px;
+  padding: 8px;
+}
+.skin-card-thumb img {
+  max-height: 90%;
+  max-width: 90%;
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.4));
+  transition: transform 0.2s ease;
+}
+.skin-card:hover .skin-card-thumb img {
+  transform: scale(1.06);
+}
+
+/* Nomi */
+.skin-card-name {
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.3;
+  margin-bottom: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  min-height: 34px;
+}
+
+/* Sotuvchi */
+.skin-card-seller {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
+
+/* Narx + tugma qatori */
+.skin-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: auto;
+  gap: 8px;
+}
+
+.skin-card-price {
+  font-size: 19px;
+  font-weight: 800;
+  color: var(--money);
+  font-family: var(--font-heading);
+}
+
+@media (max-width: 640px) {
+  .shop-search { min-width: 100%; }
+  .shop-sort-select { flex: 1; min-width: 0; }
+}
+
