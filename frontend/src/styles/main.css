@@ -769,4 +769,189 @@ body {
   background: rgba(0, 0, 0, 0.25);
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   Skin Market — shop layout (sidebar + main)
+═══════════════════════════════════════════════════════════════ */
+.shop-layout {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
 
+/* ---- Chap panel ---- */
+.shop-sidebar {
+  flex-shrink: 0;
+  width: 200px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius);
+  padding: 16px;
+  position: sticky;
+  top: 88px; /* floating navbar height + gap */
+}
+
+.shop-filter-block {
+  margin-bottom: 20px;
+}
+.shop-filter-block:last-child {
+  margin-bottom: 0;
+}
+
+.shop-filter-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+
+/* Narx oralig'i — ikkita input yon-yoniga */
+.shop-price-range {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.shop-price-range span {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+.shop-price-range input {
+  width: 0;
+  flex: 1;
+  padding: 7px 8px;
+  border-radius: 7px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--card-border);
+  color: #fff;
+  font-size: 12px;
+  outline: none;
+  transition: border-color 0.15s ease;
+  min-width: 0;
+}
+.shop-price-range input:focus {
+  border-color: var(--span);
+}
+/* Chrome number input — strelkalarni yashiramiz */
+.shop-price-range input::-webkit-inner-spin-button,
+.shop-price-range input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+}
+
+/* Rarity ro'yxati */
+.shop-rarity-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.shop-rarity-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px 2px;
+  border-radius: 6px;
+  transition: color 0.12s ease;
+  user-select: none;
+}
+.shop-rarity-item:hover {
+  color: #fff;
+}
+.shop-rarity-item input[type="checkbox"] {
+  accent-color: var(--span);
+  width: 13px;
+  height: 13px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+/* Rangli yumaloq nuqta */
+.shop-rarity-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ---- O'ng qism ---- */
+.shop-main {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Skin karta — yangi elementlar: topbar, wear badge, fav, qty
+═══════════════════════════════════════════════════════════════ */
+
+/* Wear belgisi + Sevimlilar tugmasi uchun yuqori qator */
+.skin-card-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+  min-height: 22px;
+}
+
+/* Wear qisqartmasi: FN / MW / FT / WW / BS */
+.skin-card-wear {
+  font-size: 10.5px;
+  font-weight: 800;
+  font-family: var(--font-heading);
+  letter-spacing: 0.04em;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  padding: 1px 5px;
+  line-height: 1.4;
+  opacity: 0.9;
+}
+
+/* Sevimlilar tugmasi */
+.skin-card-fav {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  padding: 0;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  transition: transform 0.15s ease, color 0.15s ease;
+}
+.skin-card-fav:hover {
+  transform: scale(1.25);
+  color: var(--red);
+}
+
+/* Miqdor belgisi — narx yonida */
+.skin-card-qty {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--card-border);
+  border-radius: 4px;
+  padding: 1px 5px;
+  line-height: 1.4;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Responsiv — 1024px dan kichik ekranlarda sidebar yashiriladi
+═══════════════════════════════════════════════════════════════ */
+@media (max-width: 1024px) {
+  .shop-layout {
+    flex-direction: column;
+  }
+  .shop-sidebar {
+    width: 100%;
+    position: static;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 16px;
+  }
+  .shop-filter-block {
+    margin-bottom: 0;
+  }
+}

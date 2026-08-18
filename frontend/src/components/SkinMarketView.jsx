@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link2, Tag, ShoppingCart, RefreshCw, CheckCircle2, AlertCircle, Lock, Zap, Search, Sword, Crosshair, Target, Wind, ShieldAlert } from 'lucide-react';
+import { Link2, Tag, ShoppingCart, RefreshCw, CheckCircle2, AlertCircle, Lock, Zap, Search, Sword, Crosshair, Target, Wind, ShieldAlert, Heart } from 'lucide-react';
 import { API_BASE, authFetch } from '../api/client';
 import { requestNotificationPermission, notifyBackground } from '../utils/notifications';
 
@@ -126,6 +126,7 @@ export function SkinMarketView({ user, onToast }) {
           classId: selectedItem.classId,
           instanceId: selectedItem.instanceId,
           marketHashName: selectedItem.marketHashName,
+          weaponType: selectedItem.type,
           iconUrl: selectedItem.iconUrl,
         }),
       });
@@ -160,6 +161,7 @@ export function SkinMarketView({ user, onToast }) {
           classId: selectedItem.classId,
           instanceId: selectedItem.instanceId,
           marketHashName: selectedItem.marketHashName,
+          weaponType: selectedItem.type,
           iconUrl: selectedItem.iconUrl,
           price,
         }),
@@ -325,6 +327,16 @@ function getWeaponCategory(marketHashName = '') {
   return 'other';
 }
 
+// "(Factory New)" -> "FN" kabi qisqartma chiqarib olish (kartaning yuqori-chap burchagida ko'rsatish uchun)
+function getWearAbbrev(name = '') {
+  if (/factory new/i.test(name)) return { code: 'FN', color: '#4ade80' };
+  if (/minimal wear/i.test(name)) return { code: 'MW', color: '#a3e635' };
+  if (/field-tested/i.test(name)) return { code: 'FT', color: '#facc15' };
+  if (/well-worn/i.test(name)) return { code: 'WW', color: '#fb923c' };
+  if (/battle-scarred/i.test(name)) return { code: 'BS', color: '#f87171' };
+  return null;
+}
+
 const SORT_OPTIONS = [
   { value: 'newest', label: 'Yangi qo\'shilganlar' },
   { value: 'price_asc', label: 'Narx: Arzondan qimmatga' },
@@ -334,7 +346,7 @@ const SORT_OPTIONS = [
 ];
 
 // marketHashName'dagi kalit so'zlarga qarab taxminiy "rarity" rangini aniqlaydi —
-// backend'da alohida rarity maydoni yo'q, shuning uchun nom ichidan chiqarib olamiz.
+// weaponType null bo'lgan eski listinglar uchun fallback sifatida ishlatiladi.
 function getRarityAccent(name = '') {
   const n = name.toLowerCase();
   if (n.startsWith('★') || n.includes('knife') || n.includes('gloves') || n.includes('bayonet') || n.includes('karambit')) {
@@ -346,13 +358,49 @@ function getRarityAccent(name = '') {
   if (n.includes('souvenir')) {
     return { color: '#ffd700', label: 'Souvenir' };
   }
-  return { color: '#4b69ff', label: 'Restricted+' }; // Default blue-ish
+  return { color: '#4b69ff', label: 'Restricted+' }; // Default blue-ish (Steam classified/restricted family)
+}
+
+// Real Steam "type" matnidan (masalan "Covert Rifle", "Extraordinary Knife")
+// rarity darajasini chiqarib olamiz — Steam'ning o'z terminologiyasi shu.
+const RARITY_TIERS = [
+  { key: 'consumer',    label: 'Standart',       color: '#b0c3d9', match: (t) => /consumer/i.test(t) },
+  { key: 'industrial',  label: 'Sanoat',          color: '#5e98d9', match: (t) => /industrial/i.test(t) },
+  { key: 'milspec',     label: 'Mil-Spec',         color: '#4b69ff', match: (t) => /mil-spec/i.test(t) },
+  { key: 'restricted',  label: 'Cheklangan',      color: '#8847ff', match: (t) => /restricted/i.test(t) },
+  { key: 'classified',  label: 'Tasniflangan',    color: '#d32ce6', match: (t) => /classified/i.test(t) },
+  { key: 'covert',      label: 'Maxfiy',          color: '#eb4b4b', match: (t) => /covert/i.test(t) },
+  { key: 'contraband',  label: 'Kontrabanda',     color: '#e4ae39', match: (t) => /contraband/i.test(t) },
+  { key: 'extraordinary', label: 'Pichoq/Qo\'lqop', color: '#e4ae39', match: (t) => /extraordinary/i.test(t) },
+];
+
+function getRarityTier(weaponType = '') {
+  return RARITY_TIERS.find((r) => r.match(weaponType)) || null;
 }
 
 function ShopTab({ listings, loading, onBuy, buyingId, onRefresh }) {
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState('newest');
   const [category, setCategory] = useState('all');
+  const [priceFrom, setPriceFrom] = useState('');
+  const [priceTo, setPriceTo] = useState('');
+  const [rarityFilter, setRarityFilter] = useState([]); // tanlangan rarity key'lar ro'yxati
+  const [favoritesOnly, setFavoritesOnly] = useState(false);
+  const [favorites, setFavorites] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('starscs_favorites') || '[]'); } catch { return []; }
+  });
+
+  const toggleFavorite = (id) => {
+    setFavorites((prev) => {
+      const next = prev.includes(id) ? prev.filter((f) => f !== id) : [...prev, id];
+      localStorage.setItem('starscs_favorites', JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const toggleRarity = (key) => {
+    setRarityFilter((prev) => prev.includes(key) ? prev.filter((r) => r !== key) : [...prev, key]);
+  };
 
   const categoryCounts = React.useMemo(() => {
     const counts = { all: listings.length };
@@ -360,6 +408,13 @@ function ShopTab({ listings, loading, onBuy, buyingId, onRefresh }) {
       const cat = getWeaponCategory(l.marketHashName);
       counts[cat] = (counts[cat] || 0) + 1;
     }
+    return counts;
+  }, [listings]);
+
+  // Bir xil nomdagi (bir nechta sotuvchidan) itemlar sonini hisoblaymiz — "xN" belgisi uchun
+  const nameCounts = React.useMemo(() => {
+    const counts = {};
+    for (const l of listings) counts[l.marketHashName] = (counts[l.marketHashName] || 0) + 1;
     return counts;
   }, [listings]);
 
@@ -372,16 +427,27 @@ function ShopTab({ listings, loading, onBuy, buyingId, onRefresh }) {
       const q = search.trim().toLowerCase();
       result = result.filter((l) => l.marketHashName.toLowerCase().includes(q));
     }
+    if (priceFrom) result = result.filter((l) => l.price >= Number(priceFrom));
+    if (priceTo)   result = result.filter((l) => l.price <= Number(priceTo));
+    if (rarityFilter.length > 0) {
+      result = result.filter((l) => {
+        const tier = getRarityTier(l.weaponType);
+        return tier && rarityFilter.includes(tier.key);
+      });
+    }
+    if (favoritesOnly) {
+      result = result.filter((l) => favorites.includes(l.id));
+    }
     const sorted = [...result];
     switch (sortBy) {
-      case 'price_asc': sorted.sort((a, b) => a.price - b.price); break;
+      case 'price_asc':  sorted.sort((a, b) => a.price - b.price); break;
       case 'price_desc': sorted.sort((a, b) => b.price - a.price); break;
-      case 'name_asc': sorted.sort((a, b) => a.marketHashName.localeCompare(b.marketHashName)); break;
-      case 'name_desc': sorted.sort((a, b) => b.marketHashName.localeCompare(a.marketHashName)); break;
-      default: sorted.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      case 'name_asc':   sorted.sort((a, b) => a.marketHashName.localeCompare(b.marketHashName)); break;
+      case 'name_desc':  sorted.sort((a, b) => b.marketHashName.localeCompare(a.marketHashName)); break;
+      default:           sorted.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     }
     return sorted;
-  }, [listings, search, sortBy, category]);
+  }, [listings, search, sortBy, category, priceFrom, priceTo, rarityFilter, favoritesOnly, favorites]);
 
   return (
     <div>
@@ -402,73 +468,129 @@ function ShopTab({ listings, loading, onBuy, buyingId, onRefresh }) {
         })}
       </div>
 
-      {/* Qidiruv + Saralash */}
-      <div className="shop-toolbar">
-        <div className="shop-search">
-          <Search size={15} className="shop-search-icon" />
-          <input
-            placeholder="Skin nomi bo'yicha qidirish..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
-        <select className="shop-sort-select" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
-          {SORT_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>{opt.label}</option>
-          ))}
-        </select>
-        <button className="btn btn-steam" onClick={onRefresh}>
-          <RefreshCw size={14} /> Yangilash
-        </button>
-      </div>
+      <div className="shop-layout">
+        {/* Chap panel — narx va rarity filtri */}
+        <aside className="shop-sidebar">
+          <div className="shop-filter-block">
+            <h4 className="shop-filter-title">Narx ($)</h4>
+            <div className="shop-price-range">
+              <input type="number" placeholder="Dan" value={priceFrom} onChange={(e) => setPriceFrom(e.target.value)} />
+              <span>—</span>
+              <input type="number" placeholder="Gacha" value={priceTo} onChange={(e) => setPriceTo(e.target.value)} />
+            </div>
+          </div>
 
-      <p style={{ color: 'var(--text-muted)', fontSize: '12px', margin: '10px 0 16px' }}>
-        Barcha narxlar sobit — tasodifiy natijaga asoslangan xarid mavjud emas. {visibleListings.length} ta natija.
-      </p>
+          <div className="shop-filter-block">
+            <h4 className="shop-filter-title">Rarity</h4>
+            <div className="shop-rarity-list">
+              {RARITY_TIERS.map((tier) => (
+                <label key={tier.key} className="shop-rarity-item">
+                  <input
+                    type="checkbox"
+                    checked={rarityFilter.includes(tier.key)}
+                    onChange={() => toggleRarity(tier.key)}
+                  />
+                  <span className="shop-rarity-dot" style={{ background: tier.color }} />
+                  {tier.label}
+                </label>
+              ))}
+            </div>
+          </div>
 
-      {loading ? (
-        <p style={{ color: 'var(--text-muted)' }}>Yuklanmoqda...</p>
-      ) : visibleListings.length === 0 ? (
-        <div className="card" style={{ textAlign: 'center', padding: '40px' }}>
-          <p style={{ color: 'var(--text-muted)' }}>
-            {listings.length === 0
-              ? "Hozircha sotuvda skin yo'q. Birinchi bo'lib siz sotuvga qo'ying!"
-              : 'Qidiruvingizga mos skin topilmadi.'}
+          <div className="shop-filter-block">
+            <label className="shop-rarity-item" style={{ fontWeight: 700 }}>
+              <input type="checkbox" checked={favoritesOnly} onChange={(e) => setFavoritesOnly(e.target.checked)} />
+              <Heart size={13} fill={favoritesOnly ? 'var(--red)' : 'none'} color="var(--red)" /> Sevimlilar
+            </label>
+          </div>
+        </aside>
+
+        {/* O'ng qism — toolbar + grid */}
+        <div className="shop-main">
+          <div className="shop-toolbar">
+            <div className="shop-search">
+              <Search size={15} className="shop-search-icon" />
+              <input
+                placeholder="Skin nomi bo'yicha qidirish..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+            <select className="shop-sort-select" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+              {SORT_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+            <button className="btn btn-steam" onClick={onRefresh}>
+              <RefreshCw size={14} /> Yangilash
+            </button>
+          </div>
+
+          <p style={{ color: 'var(--text-muted)', fontSize: '12px', margin: '10px 0 16px' }}>
+            Barcha narxlar sobit — tasodifiy natijaga asoslangan xarid mavjud emas. {visibleListings.length} ta natija.
           </p>
+
+          {loading ? (
+            <p style={{ color: 'var(--text-muted)' }}>Yuklanmoqda...</p>
+          ) : visibleListings.length === 0 ? (
+            <div className="card" style={{ textAlign: 'center', padding: '40px' }}>
+              <p style={{ color: 'var(--text-muted)' }}>
+                {listings.length === 0
+                  ? "Hozircha sotuvda skin yo'q. Birinchi bo'lib siz sotuvga qo'ying!"
+                  : 'Filtrlaringizga mos skin topilmadi.'}
+              </p>
+            </div>
+          ) : (
+            <div className="grid">
+              {visibleListings.map((listing) => {
+                const tier = getRarityTier(listing.weaponType);
+                const accentColor = tier?.color || getRarityAccent(listing.marketHashName).color;
+                const wear = getWearAbbrev(listing.marketHashName);
+                const isFav = favorites.includes(listing.id);
+                const qty = nameCounts[listing.marketHashName];
+
+                return (
+                  <div key={listing.id} className="skin-card" style={{ '--rarity-color': accentColor }}>
+                    <div className="skin-card-bar" />
+                    <div className="skin-card-topbar">
+                      {wear ? (
+                        <span className="skin-card-wear" style={{ color: wear.color, borderColor: wear.color }}>{wear.code}</span>
+                      ) : <span />}
+                      <button className="skin-card-fav" onClick={() => toggleFavorite(listing.id)}>
+                        <Heart size={15} fill={isFav ? 'var(--red)' : 'none'} color={isFav ? 'var(--red)' : 'currentColor'} />
+                      </button>
+                    </div>
+                    <div className="skin-card-thumb">
+                      {listing.iconUrl ? (
+                        <img src={listing.iconUrl} alt={listing.marketHashName} />
+                      ) : (
+                        <Tag size={32} color="var(--text-muted)" />
+                      )}
+                    </div>
+                    <h3 className="skin-card-name" title={listing.marketHashName}>{listing.marketHashName}</h3>
+                    <p className="skin-card-seller">
+                      Sotuvchi: {listing.seller?.displayName || 'Noma\'lum'}
+                    </p>
+                    <div className="skin-card-footer">
+                      <span style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+                        <span className="skin-card-price">${listing.price.toFixed(2)}</span>
+                        {qty > 1 && <span className="skin-card-qty">x{qty}</span>}
+                      </span>
+                      <button
+                        className="btn btn-wallet"
+                        disabled={buyingId === listing.id}
+                        onClick={() => onBuy(listing)}
+                      >
+                        {buyingId === listing.id ? '...' : 'Sotib olish'}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
-      ) : (
-        <div className="grid">
-          {visibleListings.map((listing) => {
-            const rarity = getRarityAccent(listing.marketHashName);
-            return (
-              <div key={listing.id} className="skin-card" style={{ '--rarity-color': rarity.color }}>
-                <div className="skin-card-bar" />
-                <div className="skin-card-thumb">
-                  {listing.iconUrl ? (
-                    <img src={listing.iconUrl} alt={listing.marketHashName} />
-                  ) : (
-                    <Tag size={32} color="var(--text-muted)" />
-                  )}
-                </div>
-                <h3 className="skin-card-name" title={listing.marketHashName}>{listing.marketHashName}</h3>
-                <p className="skin-card-seller">
-                  Sotuvchi: {listing.seller?.displayName || 'Noma\'lum'}
-                </p>
-                <div className="skin-card-footer">
-                  <span className="skin-card-price">${listing.price.toFixed(2)}</span>
-                  <button
-                    className="btn btn-wallet"
-                    disabled={buyingId === listing.id}
-                    onClick={() => onBuy(listing)}
-                  >
-                    {buyingId === listing.id ? 'Yuborilmoqda...' : 'Sotib olish'}
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
+      </div>
     </div>
   );
 }
