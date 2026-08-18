@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link2, Tag, ShoppingCart, RefreshCw, CheckCircle2, AlertCircle, Lock, Zap, Search, Sword, Crosshair, Target, Wind, ShieldAlert, Heart } from 'lucide-react';
+import { Link2, Tag, ShoppingCart, RefreshCw, CheckCircle2, AlertCircle, Lock, Zap, Search, Sword, Crosshair, Target, Wind, ShieldAlert, Heart, Hand, ChevronDown } from 'lucide-react';
 import { API_BASE, authFetch } from '../api/client';
 import { requestNotificationPermission, notifyBackground } from '../utils/notifications';
 
@@ -294,27 +294,38 @@ export function SkinMarketView({ user, onToast }) {
 // qism qurol nomi. Shunga qarab kategoriyaga ajratamiz.
 const WEAPON_CATEGORIES = {
   knife: {
-    label: 'Pichoq / Qo\'lqop', icon: Sword,
-    match: (w) => w.startsWith('★') || /knife|karambit|bayonet|gloves|wraps/i.test(w),
+    label: 'Pichoq', icon: Sword,
+    weapons: ['Karambit', 'Bayonet', 'Butterfly Knife', 'Bowie Knife', 'Falchion Knife', 'Flip Knife', 'Gut Knife', 'Huntsman Knife', 'M9 Bayonet', 'Navaja Knife', 'Nomad Knife', 'Paracord Knife', 'Shadow Daggers', 'Skeleton Knife', 'Stiletto Knife', 'Survival Knife', 'Talon Knife', 'Ursus Knife', 'Classic Knife'],
+    match: (w) => w.startsWith('★') && !/gloves|wraps/i.test(w),
+  },
+  gloves: {
+    label: 'Qo\'lqop', icon: Hand,
+    weapons: ['Bloodhound Gloves', 'Broken Fang Gloves', 'Driver Gloves', 'Hand Wraps', 'Hydra Gloves', 'Moto Gloves', 'Specialist Gloves', 'Sport Gloves'],
+    match: (w) => /gloves|wraps/i.test(w),
   },
   sniper: {
     label: 'Snayper', icon: Crosshair,
+    weapons: ['AWP', 'G3SG1', 'SCAR-20', 'SSG 08'],
     match: (w) => ['awp', 'ssg 08', 'scar-20', 'g3sg1'].includes(w.toLowerCase()),
   },
   rifle: {
     label: 'Avtomat', icon: Target,
+    weapons: ['AK-47', 'M4A4', 'M4A1-S', 'SG 553', 'AUG', 'FAMAS', 'Galil AR'],
     match: (w) => ['ak-47', 'm4a4', 'm4a1-s', 'sg 553', 'aug', 'famas', 'galil ar'].includes(w.toLowerCase()),
   },
   pistol: {
     label: 'Pistolet', icon: Zap,
+    weapons: ['Glock-18', 'USP-S', 'P250', 'Desert Eagle', 'Five-SeveN', 'Tec-9', 'CZ75-Auto', 'P2000', 'R8 Revolver', 'Dual Berettas'],
     match: (w) => ['glock-18', 'usp-s', 'p250', 'desert eagle', 'five-seven', 'tec-9', 'cz75-auto', 'p2000', 'r8 revolver', 'dual berettas'].includes(w.toLowerCase()),
   },
   smg: {
     label: 'SMG', icon: Wind,
+    weapons: ['MP9', 'MAC-10', 'MP7', 'UMP-45', 'P90', 'PP-Bizon', 'MP5-SD'],
     match: (w) => ['mp9', 'mac-10', 'mp7', 'ump-45', 'p90', 'pp-bizon', 'mp5-sd'].includes(w.toLowerCase()),
   },
   heavy: {
     label: 'Og\'ir qurol', icon: ShieldAlert,
+    weapons: ['Nova', 'XM1014', 'Sawed-Off', 'MAG-7', 'M249', 'Negev'],
     match: (w) => ['nova', 'xm1014', 'sawed-off', 'mag-7', 'm249', 'negev'].includes(w.toLowerCase()),
   },
 };
@@ -346,7 +357,7 @@ const SORT_OPTIONS = [
 ];
 
 // marketHashName'dagi kalit so'zlarga qarab taxminiy "rarity" rangini aniqlaydi —
-// weaponType null bo'lgan eski listinglar uchun fallback sifatida ishlatiladi.
+// backend'da alohida rarity maydoni yo'q, shuning uchun nom ichidan chiqarib olamiz.
 function getRarityAccent(name = '') {
   const n = name.toLowerCase();
   if (n.startsWith('★') || n.includes('knife') || n.includes('gloves') || n.includes('bayonet') || n.includes('karambit')) {
@@ -364,13 +375,13 @@ function getRarityAccent(name = '') {
 // Real Steam "type" matnidan (masalan "Covert Rifle", "Extraordinary Knife")
 // rarity darajasini chiqarib olamiz — Steam'ning o'z terminologiyasi shu.
 const RARITY_TIERS = [
-  { key: 'consumer',    label: 'Standart',       color: '#b0c3d9', match: (t) => /consumer/i.test(t) },
-  { key: 'industrial',  label: 'Sanoat',          color: '#5e98d9', match: (t) => /industrial/i.test(t) },
-  { key: 'milspec',     label: 'Mil-Spec',         color: '#4b69ff', match: (t) => /mil-spec/i.test(t) },
-  { key: 'restricted',  label: 'Cheklangan',      color: '#8847ff', match: (t) => /restricted/i.test(t) },
-  { key: 'classified',  label: 'Tasniflangan',    color: '#d32ce6', match: (t) => /classified/i.test(t) },
-  { key: 'covert',      label: 'Maxfiy',          color: '#eb4b4b', match: (t) => /covert/i.test(t) },
-  { key: 'contraband',  label: 'Kontrabanda',     color: '#e4ae39', match: (t) => /contraband/i.test(t) },
+  { key: 'consumer', label: 'Standart', color: '#b0c3d9', match: (t) => /consumer/i.test(t) },
+  { key: 'industrial', label: 'Sanoat', color: '#5e98d9', match: (t) => /industrial/i.test(t) },
+  { key: 'milspec', label: 'Mil-Spec', color: '#4b69ff', match: (t) => /mil-spec/i.test(t) },
+  { key: 'restricted', label: 'Cheklangan', color: '#8847ff', match: (t) => /restricted/i.test(t) },
+  { key: 'classified', label: 'Tasniflangan', color: '#d32ce6', match: (t) => /classified/i.test(t) },
+  { key: 'covert', label: 'Maxfiy', color: '#eb4b4b', match: (t) => /covert/i.test(t) },
+  { key: 'contraband', label: 'Kontrabanda', color: '#e4ae39', match: (t) => /contraband/i.test(t) },
   { key: 'extraordinary', label: 'Pichoq/Qo\'lqop', color: '#e4ae39', match: (t) => /extraordinary/i.test(t) },
 ];
 
@@ -382,6 +393,8 @@ function ShopTab({ listings, loading, onBuy, buyingId, onRefresh }) {
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState('newest');
   const [category, setCategory] = useState('all');
+  const [weaponFilter, setWeaponFilter] = useState(null); // masalan "AWP" — kategoriya ichida aniq qurol
+  const [expandedCategory, setExpandedCategory] = useState(null); // qaysi tab dropdown ochiq
   const [priceFrom, setPriceFrom] = useState('');
   const [priceTo, setPriceTo] = useState('');
   const [rarityFilter, setRarityFilter] = useState([]); // tanlangan rarity key'lar ro'yxati
@@ -423,12 +436,15 @@ function ShopTab({ listings, loading, onBuy, buyingId, onRefresh }) {
     if (category !== 'all') {
       result = result.filter((l) => getWeaponCategory(l.marketHashName) === category);
     }
+    if (weaponFilter) {
+      result = result.filter((l) => l.marketHashName.split('|')[0].trim().toLowerCase() === weaponFilter.toLowerCase());
+    }
     if (search.trim()) {
       const q = search.trim().toLowerCase();
       result = result.filter((l) => l.marketHashName.toLowerCase().includes(q));
     }
     if (priceFrom) result = result.filter((l) => l.price >= Number(priceFrom));
-    if (priceTo)   result = result.filter((l) => l.price <= Number(priceTo));
+    if (priceTo) result = result.filter((l) => l.price <= Number(priceTo));
     if (rarityFilter.length > 0) {
       result = result.filter((l) => {
         const tier = getRarityTier(l.weaponType);
@@ -440,30 +456,63 @@ function ShopTab({ listings, loading, onBuy, buyingId, onRefresh }) {
     }
     const sorted = [...result];
     switch (sortBy) {
-      case 'price_asc':  sorted.sort((a, b) => a.price - b.price); break;
+      case 'price_asc': sorted.sort((a, b) => a.price - b.price); break;
       case 'price_desc': sorted.sort((a, b) => b.price - a.price); break;
-      case 'name_asc':   sorted.sort((a, b) => a.marketHashName.localeCompare(b.marketHashName)); break;
-      case 'name_desc':  sorted.sort((a, b) => b.marketHashName.localeCompare(a.marketHashName)); break;
-      default:           sorted.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      case 'name_asc': sorted.sort((a, b) => a.marketHashName.localeCompare(b.marketHashName)); break;
+      case 'name_desc': sorted.sort((a, b) => b.marketHashName.localeCompare(a.marketHashName)); break;
+      default: sorted.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     }
     return sorted;
-  }, [listings, search, sortBy, category, priceFrom, priceTo, rarityFilter, favoritesOnly, favorites]);
+  }, [listings, search, sortBy, category, weaponFilter, priceFrom, priceTo, rarityFilter, favoritesOnly, favorites]);
 
   return (
     <div>
-      {/* Kategoriya tablari */}
       <div className="category-tabs">
-        <button className={`category-tab ${category === 'all' ? 'active' : ''}`} onClick={() => setCategory('all')}>
+        <button
+          className={`category-tab ${category === 'all' ? 'active' : ''}`}
+          onClick={() => { setCategory('all'); setWeaponFilter(null); setExpandedCategory(null); }}
+        >
           Barchasi <span className="category-count">{categoryCounts.all || 0}</span>
         </button>
         {Object.entries(WEAPON_CATEGORIES).map(([key, cat]) => {
           const Icon = cat.icon;
           const count = categoryCounts[key] || 0;
           if (count === 0) return null;
+          const isExpanded = expandedCategory === key;
           return (
-            <button key={key} className={`category-tab ${category === key ? 'active' : ''}`} onClick={() => setCategory(key)}>
-              <Icon size={13} /> {cat.label} <span className="category-count">{count}</span>
-            </button>
+            <div key={key} className="category-tab-wrap">
+              <button
+                className={`category-tab ${category === key ? 'active' : ''}`}
+                onClick={() => { setCategory(key); setWeaponFilter(null); }}
+              >
+                <Icon size={13} /> {cat.label} <span className="category-count">{count}</span>
+                <ChevronDown
+                  size={13}
+                  className={`category-chevron ${isExpanded ? 'open' : ''}`}
+                  onClick={(e) => { e.stopPropagation(); setExpandedCategory(isExpanded ? null : key); }}
+                />
+              </button>
+              {isExpanded && (
+                <div className="category-dropdown">
+                  <button
+                    className={`category-dropdown-item ${!weaponFilter ? 'active' : ''}`}
+                    onClick={() => { setCategory(key); setWeaponFilter(null); setExpandedCategory(null); }}
+                  >
+                    Barchasini ko'rsatish
+                  </button>
+                  {cat.weapons.map((w) => (
+                    <button
+                      key={w}
+                      className={`category-dropdown-item ${weaponFilter === w ? 'active' : ''}`}
+                      onClick={() => { setCategory(key); setWeaponFilter(w); setExpandedCategory(null); }}
+                    >
+                      <Icon size={13} className="category-dropdown-icon" />
+                      {w}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           );
         })}
       </div>
@@ -548,9 +597,14 @@ function ShopTab({ listings, loading, onBuy, buyingId, onRefresh }) {
                 const wear = getWearAbbrev(listing.marketHashName);
                 const isFav = favorites.includes(listing.id);
                 const qty = nameCounts[listing.marketHashName];
+                const isHighValue = listing.price >= 30; // qimmat item — porlaydigan fon
 
                 return (
-                  <div key={listing.id} className="skin-card" style={{ '--rarity-color': accentColor }}>
+                  <div
+                    key={listing.id}
+                    className={`skin-card ${isHighValue ? 'skin-card-premium' : ''}`}
+                    style={{ '--rarity-color': accentColor }}
+                  >
                     <div className="skin-card-bar" />
                     <div className="skin-card-topbar">
                       {wear ? (
