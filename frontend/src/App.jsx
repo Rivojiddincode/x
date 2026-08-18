@@ -45,6 +45,44 @@ export default function App() {
   // Request Form State
   const [reqForm, setReqForm] = useState({ name: '', telegram: '', type: 'admin', message: '' });
 
+  // To'lovdan qaytib kelgandagi tekshiruv — agar tugallanmagan (pending) buyurtma bo'lsa,
+  // webhook hali kelmagan bo'lishi mumkin (kechikish yoki xatolik). Shuni fallback
+  // sifatida tekshirib, foydalanuvchini "osilib qolgan" holatda qoldirmaymiz.
+  useEffect(() => {
+    const pendingOrderId = localStorage.getItem('starscs_pending_order');
+    if (!pendingOrderId) return;
+
+    const token = localStorage.getItem('starscs_token');
+    if (!token) {
+      localStorage.removeItem('starscs_pending_order');
+      return;
+    }
+
+    let attempts = 0;
+    const checkStatus = () => {
+      attempts += 1;
+      authFetch(`/payments/inpay/status/${pendingOrderId}`)
+        .then((d) => {
+          if (!d.success) {
+            localStorage.removeItem('starscs_pending_order');
+            return;
+          }
+          if (d.status === 'success') {
+            showToastMsg(`✅ To'lov muvaffaqiyatli! Balansingiz ${Number(d.amount).toLocaleString()} UZS'ga to'ldi.`);
+            setUser((prev) => prev ? { ...prev, balance: (prev.balance || 0) + Number(d.amount) } : prev);
+            localStorage.removeItem('starscs_pending_order');
+          } else if (d.status === 'pending' && attempts < 5) {
+            setTimeout(checkStatus, 4000); // 4 soniyadan keyin qayta urinib ko'ramiz (jami ~20 soniya)
+          } else {
+            // failed / cancelled / juda uzoq pending qoldi
+            localStorage.removeItem('starscs_pending_order');
+          }
+        })
+        .catch(() => localStorage.removeItem('starscs_pending_order'));
+    };
+    checkStatus();
+  }, []);
+
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('steamAuth') === 'success') {

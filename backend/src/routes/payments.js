@@ -65,49 +65,74 @@ router.post('/webhook', express.json(), async (req, res) => {
   // Darhol 200 qaytaramiz — keyingi ishlov asinxron bajariladi
   res.sendStatus(200);
 
-  const { order_id, status, amount } = req.body;
+  const { order_id } = req.body;
 
-  if (!order_id || !status) {
+  if (!order_id) {
     console.warn('[inPAY webhook] Yaroqsiz payload:', req.body);
     return;
   }
 
-  console.log(`[inPAY webhook] order_id=${order_id} status=${status} amount=${amount}`);
+  console.log(`[inPAY webhook] order_id=${order_id} keldi, inPAY'dan haqiqiy holatni tasdiqlaymiz...`);
 
   try {
     const order = await prisma.paymentOrder.findUnique({ where: { orderId: order_id } });
-
     if (!order) {
       console.warn(`[inPAY webhook] order_id topilmadi: ${order_id}`);
       return;
     }
-
-    // Takroriy webhook'lardan himoya — allaqachon qayta ishlangan bo'lsa skip
     if (order.status === 'success') {
       console.log(`[inPAY webhook] ${order_id} allaqachon muvaffaqiyatli, skip.`);
       return;
     }
 
-    await prisma.paymentOrder.update({
-      where: { orderId: order_id },
-      data: { status, updatedAt: new Date() },
-    });
-
-    // Faqat muvaffaqiyatli to'lovlarda balansni yangilaymiz
-    if (status === 'success') {
-      const paidAmount = Math.floor(Number(amount)); // tiyin bo'lishi mumkin
-
-      await prisma.user.update({
-        where: { steamId: order.steamId },
-        data: { balance: { increment: paidAmount } },
-      });
-
-      console.log(`[inPAY webhook] ✅ ${order.steamId} hisobiga ${paidAmount} UZS qo'shildi`);
-    }
+    // MUHIM: webhook body'dagi status'ga ko'r-ko'rona ishonmaymiz (imzo bilan
+    // tasdiqlanmagani uchun kimdir soxta so'rov yuborishi mumkin). Buning o'rniga
+    // inPAY'ning o'z API'sidan (GET /transactions/) HAQIQIY holatni so'raymiz.
+    const live = await getPaymentStatus(order_id);
+    await processConfirmedPayment(order_id, live);
   } catch (err) {
-    console.error('[inPAY webhook] DB xatoligi:', err.message);
+    console.error('[inPAY webhook] Xatolik:', err.message);
   }
 });
+
+/**
+ * Tasdiqlangan (inPAY'ning o'z API'sidan olingan) to'lov natijasini qayta ishlaydi.
+ * Atomic (shartli) update orqali — agar order allaqachon 'success' bo'lsa,
+ * update 0 qatorga tegadi va balans IKKINCHI MARTA qo'shilmaydi (webhook va
+ * polling bir vaqtda ishga tushsa ham xavfsiz).
+ */
+async function processConfirmedPayment(orderId, live) {
+  if (live.status !== 'success') {
+    await prisma.paymentOrder.updateMany({
+      where: { orderId, status: { not: 'success' } },
+      data: { status: live.status, updatedAt: new Date() },
+    });
+    return;
+  }
+
+  // Faqat HALI 'success' bo'lmagan buyurtmani yangilaymiz — shartli (atomic) update.
+  // count === 0 bo'lsa, demak boshqa so'rov (webhook yoki polling) allaqachon
+  // ulgurgan — balansni qayta qo'shmaymiz.
+  const result = await prisma.paymentOrder.updateMany({
+    where: { orderId, status: { not: 'success' } },
+    data: { status: 'success', updatedAt: new Date() },
+  });
+
+  if (result.count === 0) {
+    console.log(`[inPAY] ${orderId} allaqachon boshqa so'rov tomonidan qayta ishlangan, skip.`);
+    return;
+  }
+
+  const order = await prisma.paymentOrder.findUnique({ where: { orderId } });
+  const paidAmount = Math.floor(Number(live.amount));
+
+  await prisma.user.update({
+    where: { steamId: order.steamId },
+    data: { balance: { increment: paidAmount } },
+  });
+
+  console.log(`[inPAY] ✅ ${order.steamId} hisobiga ${paidAmount} UZS qo'shildi (order_id=${orderId})`);
+}
 
 // ─── GET /api/v1/payments/inpay/status/:orderId ──────────────────────────────
 // To'lov holatini polling orqali tekshirish (webhook kelmasa fallback).
@@ -132,21 +157,7 @@ router.get('/status/:orderId', requireAuth, async (req, res) => {
     if (order.status === 'pending') {
       const live = await getPaymentStatus(orderId);
       if (live.status !== 'pending') {
-        // DB ni yangilash
-        await prisma.paymentOrder.update({
-          where: { orderId },
-          data: { status: live.status, updatedAt: new Date() },
-        });
-
-        // success bo'lsa balansni yangilash (webhook kelmagan bo'lsa)
-        if (live.status === 'success') {
-          await prisma.user.update({
-            where: { steamId },
-            data: { balance: { increment: live.amount } },
-          });
-          console.log(`[inPAY status] ✅ ${steamId} hisobiga ${live.amount} UZS (polling orqali)`);
-        }
-
+        await processConfirmedPayment(orderId, live);
         return res.json({ success: true, status: live.status, amount: live.amount });
       }
     }
