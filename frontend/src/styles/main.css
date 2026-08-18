@@ -724,3 +724,49 @@ body {
   .shop-sort-select { flex: 1; min-width: 0; }
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   Skin Market — qurol kategoriyasi tablari
+═══════════════════════════════════════════════════════════════ */
+.category-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.category-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--card-border);
+  color: var(--text-muted);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+.category-tab:hover {
+  border-color: var(--span);
+  color: #fff;
+}
+.category-tab.active {
+  background: var(--span);
+  border-color: var(--span);
+  color: #0b0d14;
+}
+
+.category-count {
+  background: rgba(0, 0, 0, 0.2);
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 10.5px;
+}
+.category-tab.active .category-count {
+  background: rgba(0, 0, 0, 0.25);
+}
+
+
