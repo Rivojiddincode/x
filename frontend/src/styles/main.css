@@ -546,6 +546,7 @@ body {
 
 /* Main Grid & Cards */
 .main { padding: 36px 20px 80px; }
+@media (max-width: 768px) { .main { padding: 20px 12px 90px; } }
 .filter-bar { display: flex; gap: 8px; margin-bottom: 24px; flex-wrap: wrap; }
 .filter-btn { background: var(--card-bg); border: 1px solid var(--card-border); color: var(--text-muted); padding: 8px 16px; border-radius: 8px; cursor: pointer; font-family: var(--font-heading); font-weight: 700; font-size: 12px; }
 .filter-btn.active { background: var(--span); color: #fff; border-color: var(--span); }
@@ -571,7 +572,183 @@ body {
 .form-input:focus { border-color: var(--span); }
 
 /* Toast */
-.toast { position: fixed; bottom: 24px; right: 24px; background: var(--card-bg); border-left: 4px solid var(--green); padding: 14px 20px; border-radius: 8px; color: #fff; font-weight: 600; box-shadow: 0 10px 30px rgba(0,0,0,0.5); z-index: 3000; }
+.toast { position: fixed; bottom: 90px; right: 16px; background: var(--card-bg); border-left: 4px solid var(--green); padding: 14px 20px; border-radius: 8px; color: #fff; font-weight: 600; box-shadow: 0 10px 30px rgba(0,0,0,0.5); z-index: 3000; max-width: calc(100vw - 32px); }
+@media (min-width: 769px) {
+  .toast { bottom: 24px; right: 24px; }
+}
+
+/* =============================
+   Responsive Visibility Helpers
+   ============================= */
+.desktop-only { display: flex; }
+.mobile-only  { display: none; }
+
+/* =============================
+   Bottom Navigation Bar (Mobile)
+   ============================= */
+.bottom-nav {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 68px;
+  background: rgba(11, 13, 20, 0.96);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.6);
+  z-index: 900;
+  padding: 0 4px;
+  padding-bottom: env(safe-area-inset-bottom);
+  justify-content: space-around;
+  align-items: center;
+}
+
+.bottom-nav-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 6px 4px;
+  border-radius: 12px;
+  transition: color 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  min-width: 0;
+}
+
+.bottom-nav-btn.active {
+  color: #fff;
+}
+
+.bottom-nav-icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 28px;
+}
+
+.bottom-nav-active-blob {
+  position: absolute;
+  inset: -4px;
+  border-radius: 12px;
+  background: rgba(59, 130, 246, 0.18);
+  z-index: -1;
+  animation: blob-appear 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes blob-appear {
+  from { opacity: 0; transform: scale(0.7); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.bottom-nav-btn.active .bottom-nav-icon svg {
+  color: var(--span);
+  filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.6));
+}
+
+.bottom-nav-label {
+  font-size: 10px;
+  font-weight: 600;
+  font-family: var(--font-heading);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 56px;
+  transition: color 0.2s ease;
+}
+
+.bottom-nav-btn.active .bottom-nav-label {
+  color: var(--span);
+}
+
+/* =============================
+   Mobile Hamburger Menu
+   ============================= */
+.btn-mobile-menu {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #fff;
+  padding: 8px 10px;
+}
+
+.mobile-menu-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(6px);
+  z-index: 1500;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: stretch;
+  padding-top: 80px;
+  animation: fade-in 0.18s ease;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.mobile-menu-panel {
+  background: rgba(20, 23, 34, 0.98);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0 0 20px 20px;
+  padding: 16px 12px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  animation: slide-down 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slide-down {
+  from { transform: translateY(-20px); opacity: 0; }
+  to   { transform: translateY(0);     opacity: 1; }
+}
+
+.mobile-menu-heading {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  padding: 0 12px 8px;
+}
+
+.mobile-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: #cbd5e1;
+  font-size: 15px;
+  font-weight: 500;
+  font-family: var(--font-body);
+  padding: 13px 16px;
+  border-radius: 12px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s ease, color 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mobile-menu-item:hover,
+.mobile-menu-item.active {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
 
 /* Admin panel — loading spinner */
 .spin {
@@ -961,4 +1138,161 @@ body {
   background: radial-gradient(circle, color-mix(in srgb, var(--rarity-color) 35%, transparent), transparent 70%);
   pointer-events: none;
   z-index: 0;
+}
+
+/* ================================================
+   MOBILE RESPONSIVE — max-width: 768px
+   ================================================ */
+@media (max-width: 768px) {
+  /* Visibility helpers */
+  .desktop-only { display: none !important; }
+  .mobile-only  { display: flex !important; }
+
+  /* Bottom nav aktivlashtirish */
+  .bottom-nav { display: flex; }
+
+  /* Navbar — kichik ekran */
+  .header {
+    top: 8px;
+    width: calc(100% - 16px);
+    height: 56px;
+  }
+
+  .header-container {
+    padding: 0 10px;
+    gap: 8px;
+  }
+
+  .logo {
+    font-size: 18px;
+  }
+
+  .brand-spartan-logo {
+    width: 26px;
+    height: 26px;
+  }
+
+  .online-pill {
+    font-size: 11px;
+    padding: 4px 9px;
+    gap: 5px;
+  }
+
+  /* Wallet tugmasi — mobilda qisqa ko'rinish */
+  .btn-wallet {
+    padding: 8px 12px;
+    font-size: 12px;
+    gap: 5px;
+  }
+
+  .btn-steam {
+    padding: 7px 10px;
+  }
+
+  /* Hero kichik ekran */
+  .hero {
+    padding: 50px 0 28px;
+  }
+  .hero-title { font-size: 30px; letter-spacing: -0.8px; }
+  .hero-subtitle { font-size: 13px; }
+  .hero-stats { gap: 10px; }
+  .stat-box { padding: 10px 14px; gap: 8px; }
+  .stat-val  { font-size: 20px; }
+  .stat-label { font-size: 10px; }
+
+  /* Grid — bir ustun */
+  .grid { grid-template-columns: 1fr; gap: 14px; }
+
+  /* Kartalar */
+  .card { padding: 18px; }
+  .card-title { font-size: 16px; }
+
+  /* Table — scrollable */
+  .table th,
+  .table td { padding: 10px 14px; font-size: 13px; }
+
+  /* Filter bar */
+  .filter-bar { gap: 6px; margin-bottom: 18px; }
+  .filter-btn { padding: 7px 12px; font-size: 11px; }
+
+  /* Modal — to'liq ekranli */
+  .modal-box {
+    max-width: 100%;
+    width: calc(100vw - 24px);
+    border-radius: 16px;
+    padding: 22px 18px;
+  }
+
+  /* VIP kartalar — bir ustun */
+  .vip-cards-grid { grid-template-columns: 1fr; }
+  .vip-card { padding: 20px 18px 18px; }
+  .vip-name  { font-size: 17px; }
+  .vip-price { font-size: 22px; }
+
+  /* Skin market */
+  .shop-search { min-width: 100%; }
+  .shop-sort-select { flex: 1; min-width: 0; }
+
+  /* Skin Market sidebar — stack */
+  .shop-layout { grid-template-columns: 1fr; }
+  .shop-sidebar {
+    position: static;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 12px 20px;
+  }
+  .shop-filter-block { flex: 1; min-width: 140px; }
+
+  /* Skin cards — 2 column grid on mobile */
+  .skin-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px;
+  }
+
+  /* Category tabs — scrollable */
+  .category-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 4px;
+    gap: 6px;
+  }
+  .category-tabs::-webkit-scrollbar { display: none; }
+
+  /* Toolbar */
+  .shop-toolbar { gap: 8px; }
+}
+
+/* ================================================
+   SMALL MOBILE — max-width: 480px
+   ================================================ */
+@media (max-width: 480px) {
+  .container { padding: 0 10px; }
+
+  .hero-title { font-size: 26px; }
+  .hero-eyebrow { font-size: 10px; padding: 5px 11px; }
+
+  .stat-box { padding: 9px 12px; gap: 7px; }
+  .stat-val  { font-size: 18px; }
+
+  .bottom-nav-label { font-size: 9px; max-width: 48px; }
+
+  .skin-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px;
+  }
+
+  .skin-card-thumb { height: 88px; }
+  .skin-card-name  { font-size: 12px; }
+  .skin-card-price { font-size: 15px; }
+}
+
+/* ================================================
+   TABLET — 769px to 1024px
+   ================================================ */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .header { width: calc(100% - 24px); }
+  .grid { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+  .nav-btn { padding: 7px 10px; font-size: 12px; gap: 5px; }
 }

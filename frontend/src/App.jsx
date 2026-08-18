@@ -10,6 +10,7 @@ import { ProfileView } from './components/ProfileView';
 import { SkinMarketView } from './components/SkinMarketView';
 import { AdminView } from './components/AdminView';
 import { Footer } from './components/Footer';
+import BottomNav from './components/BottomNav';
 import { LegalModal } from './components/LegalPages';
 import './styles/main.css';
 
@@ -360,6 +361,9 @@ export default function App() {
           />
         )}
       </main>
+
+      {/* Mobile Bottom Navigation */}
+      <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
 
       {/* inPAY Checkout Modal */}
       {showInpayModal && (
