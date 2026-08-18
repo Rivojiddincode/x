@@ -68,9 +68,25 @@ export default function App() {
             return;
           }
           if (d.status === 'success') {
-            showToastMsg(`✅ To'lov muvaffaqiyatli! Balansingiz ${Number(d.amount).toLocaleString()} UZS'ga to'ldi.`);
-            setUser((prev) => prev ? { ...prev, balance: (prev.balance || 0) + Number(d.amount) } : prev);
+            showToastMsg(`✅ To'lov muvaffaqiyatli! Balansingiz ${Number(d.amount).toLocaleString()} UZS qo'shildi.`);
             localStorage.removeItem('starscs_pending_order');
+            // DB'dan haqiqiy (yangilangan) balansni o'qib kelamiz — localStorage'dagi
+            // eski qiymatga ishonmaslik uchun (masalan, boshqa qurilmadan to'lov bo'lsa)
+            const savedSteamId = localStorage.getItem('starscs_steam_id');
+            if (savedSteamId) {
+              fetch(`${API_BASE}/auth/steam/user/${savedSteamId}`)
+                .then((r) => r.json())
+                .then((data) => {
+                  if (data.success && data.user) {
+                    setUser(data.user);
+                    localStorage.setItem('starscs_user', JSON.stringify(data.user));
+                  }
+                })
+                .catch(() => {
+                  // Fallback: agar API javob bermasa, hisob qo'shish
+                  setUser((prev) => prev ? { ...prev, balance: (prev.balance || 0) + Number(d.amount) } : prev);
+                });
+            }
           } else if (d.status === 'pending' && attempts < 5) {
             setTimeout(checkStatus, 4000); // 4 soniyadan keyin qayta urinib ko'ramiz (jami ~20 soniya)
           } else {
