@@ -31,7 +31,7 @@ export default function Navbar({ activeTab, setActiveTab, totalOnline, onOpenPay
           </div>
 
           {/* Desktop Navigation Tabs */}
-          <nav className="nav-links desktop-only">
+          <nav className="nav-links">
             <button className={`nav-btn ${activeTab === 'servers' ? 'active' : ''}`} onClick={() => setActiveTab('servers')}>
               <Gamepad2 size={15} /> Serverlar
             </button>
@@ -90,20 +90,21 @@ export default function Navbar({ activeTab, setActiveTab, totalOnline, onOpenPay
                 onClick={() => setActiveTab('profile')}
               >
                 <img src={user.avatarUrl} alt={user.displayName} style={{ width: '20px', height: '20px', borderRadius: '50%' }} />
-                <span className="btn-steam-text desktop-only">{user.displayName}</span>
+                <span className="btn-steam-text">{user.displayName}</span>
               </button>
             ) : (
               <button className="btn btn-steam" onClick={onOpenSteam}>
                 <svg className="steam-official-icon" viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
                   <path d="M11.979 0C5.678 0 .511 4.86.022 11.037l6.432 2.658c.545-.371 1.203-.59 1.912-.59.063 0 .125.004.188.006l2.861-4.142V8.91c0-2.495 2.028-4.524 4.524-4.524 2.494 0 4.524 2.03 4.524 4.524s-2.03 4.524-4.524 4.524c-.102 0-.201-.009-.302-.014l-4.086 2.923c.005.085.014.17.014.256 0 1.841-1.493 3.334-3.334 3.334-1.507 0-2.775-1.002-3.189-2.385L.43 15.659C1.706 20.5 6.13 24 11.979 24c6.627 0 12-5.373 12-12s-5.373-12-12-12z"/>
                 </svg>
-                <span className="btn-steam-text desktop-only">Steam Kirish</span>
+                <span className="btn-steam-text">Steam Kirish</span>
               </button>
             )}
 
-            {/* Mobile Hamburger — "Boshqa" menyu uchun */}
+            {/* Mobile Hamburger — "Boshqa" menyu uchun (faqat mobilda ko'rinadi) */}
             <button
-              className="btn btn-mobile-menu mobile-only"
+              id="btn-hamburger-menu"
+              className="btn btn-mobile-menu"
               onClick={() => setShowMobileMenu(!showMobileMenu)}
               aria-label="Menyu"
             >

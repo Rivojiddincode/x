@@ -580,8 +580,11 @@ body {
 /* =============================
    Responsive Visibility Helpers
    ============================= */
-.desktop-only { display: flex; }
-.mobile-only  { display: none; }
+.desktop-only      { display: revert; }
+.mobile-only       { display: none !important; }
+nav.desktop-only   { display: flex; }
+.btn-label-desktop { display: inline; }
+.btn-mobile-menu   { display: none; }   /* desktop'da yashirin, CSS media ochadi */
 
 /* =============================
    Bottom Navigation Bar (Mobile)
@@ -1144,9 +1147,15 @@ body {
    MOBILE RESPONSIVE — max-width: 768px
    ================================================ */
 @media (max-width: 768px) {
+  /* Nav: yashirish */
+  .nav-links          { display: none !important; }
+  .btn-steam-text     { display: none !important; }
+  .btn-label-desktop  { display: none !important; }
+  .btn-mobile-menu    { display: flex !important; }
+
   /* Visibility helpers */
-  .desktop-only { display: none !important; }
-  .mobile-only  { display: flex !important; }
+  .desktop-only      { display: none !important; }
+  .mobile-only       { display: flex !important; }
 
   /* Bottom nav aktivlashtirish */
   .bottom-nav { display: flex; }
