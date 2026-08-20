@@ -120,7 +120,7 @@ function FlaggedTab({ onToast }) {
             <tr key={tx.id}>
               <td>#{tx.id}</td>
               <td>{tx.listing?.marketHashName}</td>
-              <td style={{ color: 'var(--money)' }}>${tx.price}</td>
+              <td style={{ color: 'var(--money)' }}>{Number(tx.price).toLocaleString()} UZS</td>
               <td>{tx.seller?.displayName}</td>
               <td>{tx.buyer?.displayName}</td>
               <td style={{ color: 'var(--red)', fontSize: '12px' }}>{tx.failReason}</td>
@@ -153,7 +153,7 @@ function BotStockTab({ onToast }) {
 
   const resell = async (id) => {
     const price = prices[id];
-    if (!price || Number(price) < 0.5) return onToast?.('Narx kamida $0.5 bo\'lishi kerak');
+    if (!price || Number(price) < 6500) return onToast?.('Narx kamida 6 500 UZS bo\'lishi kerak');
     setResellingId(id);
     const d = await authFetch(`/admin/bot-stock/${id}/resell`, { method: 'POST', body: JSON.stringify({ price }) });
     if (d.success) { onToast?.('Item qayta sotuvga qo\'yildi'); load(); }
@@ -172,10 +172,10 @@ function BotStockTab({ onToast }) {
             {l.iconUrl && <img src={l.iconUrl} alt="" style={{ maxHeight: '90%' }} />}
           </div>
           <p style={{ fontSize: '12px', marginBottom: '8px' }}>{l.marketHashName}</p>
-          <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px' }}>Instant-sell narxi edi: ${l.price}</p>
+          <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px' }}>Instant-sell narxi edi: {Number(l.price).toLocaleString()} UZS</p>
           <div style={{ display: 'flex', gap: '8px' }}>
             <input
-              type="number" min="0.5" step="0.01" placeholder="Yangi narx"
+              type="number" min="6500" step="100" placeholder="Yangi narx (UZS)"
               value={prices[l.id] || ''}
               onChange={(e) => setPrices((p) => ({ ...p, [l.id]: e.target.value }))}
               style={{ flex: 1, padding: '8px', borderRadius: '6px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--card-border)', color: '#fff', fontSize: '12px' }}

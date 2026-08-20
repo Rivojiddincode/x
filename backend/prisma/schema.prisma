@@ -109,7 +109,7 @@ model SkinListing {
   marketHashName String
   weaponType     String?  // Steam'ning o'z type maydoni: "Covert Rifle", "Extraordinary Knife" va h.k. — rarity filtri uchun
   iconUrl        String
-  price          Float    // in USD, minimum 0.5 enforced at the API layer
+  price          Float    // in UZS (frontend USD da kiritadi, backend kurs bo'yicha UZS ga convert qiladi)
   status         String   @default("ACTIVE") // ACTIVE | PENDING | SOLD | CANCELLED | BOT_STOCK (instant-sell orqali botga o'tgan)
   createdAt      DateTime @default(now())
   transaction    SkinTransaction?

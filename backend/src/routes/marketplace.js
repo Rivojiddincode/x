@@ -12,7 +12,8 @@ import { checkNotBanned } from '../middleware/ban.js';
 const prisma = new PrismaClient();
 const router = express.Router();
 
-const MIN_PRICE = 0.5;
+// Minimal narx UZS da (~6 500 so'm ≈ $0.50)
+const MIN_PRICE_UZS = 6500;
 
 // ---------------------------------------------------------
 // 1. Foydalanuvchi trade link'ini saqlash
@@ -67,7 +68,7 @@ router.get('/inventory/:steamId', requireAuth, async (req, res) => {
 });
 
 // ---------------------------------------------------------
-// 2b. Berilgan item uchun hozirgi Steam Market narxini tavsiya qilish
+// 2b. Berilgan item uchun hozirgi Steam Market narxini tavsiya qilish (UZS da)
 // ---------------------------------------------------------
 router.get('/market-price', async (req, res) => {
   const { marketHashName } = req.query;
@@ -79,7 +80,8 @@ router.get('/market-price', async (req, res) => {
     if (price === null) {
       return res.json({ success: true, price: null, message: 'Steam narx bermadi (yangi/kam savdo qilinadigan item bo\'lishi mumkin)' });
     }
-    res.json({ success: true, price });
+    // price endi UZS da (Steam currency=507)
+    res.json({ success: true, price, currency: 'UZS' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -109,19 +111,34 @@ router.get('/float', async (req, res) => {
 // ---------------------------------------------------------
 router.post('/listings', requireAuth, checkNotBanned, sensitiveActionLimiter, async (req, res) => {
   const sellerSteamId = req.user.steamId;
+  // price — foydalanuvchi UZS da kiritadi (frontend Steam narxini UZS da ko'rsatadi)
   const { assetId, classId, instanceId, marketHashName, iconUrl, price, weaponType } = req.body;
 
   if (!assetId || !price) {
     return res.status(400).json({ success: false, message: 'Majburiy maydonlar to\'ldirilmagan' });
   }
-  if (Number(price) < MIN_PRICE) {
-    return res.status(400).json({ success: false, message: `Minimal narx $${MIN_PRICE}` });
+  if (Number(price) < MIN_PRICE_UZS) {
+    return res.status(400).json({ success: false, message: `Minimal narx ${MIN_PRICE_UZS.toLocaleString()} UZS` });
   }
 
   const seller = await prisma.user.findUnique({ where: { steamId: sellerSteamId } });
   if (!seller) return res.status(404).json({ success: false, message: 'Sotuvchi topilmadi' });
   if (!seller.tradeUrl) {
     return res.status(400).json({ success: false, message: 'Avval trade link kiriting' });
+  }
+
+  // Duplicate tekshiruvi: shu assetId bilan ACTIVE yoki PENDING listing allaqachon bor bo'lsa, rad etamiz
+  const existingListing = await prisma.skinListing.findFirst({
+    where: {
+      assetId,
+      status: { in: ['ACTIVE', 'PENDING'] },
+    },
+  });
+  if (existingListing) {
+    return res.status(409).json({
+      success: false,
+      message: 'Bu skin allaqachon savdoda turibdi. Avval uni olib tashlang.',
+    });
   }
 
   const listing = await prisma.skinListing.create({
@@ -133,7 +150,7 @@ router.post('/listings', requireAuth, checkNotBanned, sensitiveActionLimiter, as
       marketHashName,
       weaponType,
       iconUrl,
-      price: Number(price),
+      price: Math.round(Number(price)), // UZS da saqlanadi
       status: 'ACTIVE',
     },
   });
@@ -160,6 +177,7 @@ router.get('/listings', async (req, res) => {
 // ---------------------------------------------------------
 // 4b. Tezkor sotish (Instant Sell)
 // ---------------------------------------------------------
+// Tezkor sotishda foydalanuvchiga bozor narxining 50% beriladi
 const INSTANT_SELL_RATE = 0.5;
 
 router.post('/instant-sell', requireAuth, checkNotBanned, sensitiveActionLimiter, async (req, res) => {
@@ -176,18 +194,20 @@ router.post('/instant-sell', requireAuth, checkNotBanned, sensitiveActionLimiter
     return res.status(400).json({ success: false, message: 'Avval trade link kiriting' });
   }
 
+  // marketPrice — Steam API dan UZS da keladi (currency=507)
   const marketPrice = await fetchMarketPrice(marketHashName);
   if (!marketPrice) {
     return res.status(400).json({ success: false, message: 'Bu item uchun bozor narxi topilmadi, tezkor sotish mumkin emas' });
   }
 
-  const instantPrice = Math.max(MIN_PRICE, Number((marketPrice * INSTANT_SELL_RATE).toFixed(2)));
+  // Tezkor sotish narxi UZS da: bozor narxining 50%, minimal MIN_PRICE_UZS
+  const instantPrice = Math.max(MIN_PRICE_UZS, Math.round(marketPrice * INSTANT_SELL_RATE));
 
   const listing = await prisma.skinListing.create({
     data: {
       sellerId: seller.id,
       assetId, classId, instanceId, marketHashName, iconUrl,
-      price: instantPrice,
+      price: instantPrice, // UZS
       status: 'PENDING',
     },
   });
@@ -197,7 +217,7 @@ router.post('/instant-sell', requireAuth, checkNotBanned, sensitiveActionLimiter
       listingId: listing.id,
       buyerId: seller.id,
       sellerId: seller.id,
-      price: instantPrice,
+      price: instantPrice, // UZS
       status: 'AWAITING_SELLER_TRADE',
     },
   });
@@ -208,9 +228,9 @@ router.post('/instant-sell', requireAuth, checkNotBanned, sensitiveActionLimiter
 
     res.json({
       success: true,
-      message: `Bot'ga so'rov yuborildi. Tasdiqlagach, $${instantPrice} balansingizga darhol tushadi.`,
-      instantPrice,
-      marketPrice,
+      message: `Bot'ga so'rov yuborildi. Tasdiqlagach, ${instantPrice.toLocaleString()} UZS balansingizga darhol tushadi.`,
+      instantPrice,    // UZS
+      marketPrice,     // UZS (Steam'dan kelgan)
       transactionId: tx.id,
     });
   } catch (err) {

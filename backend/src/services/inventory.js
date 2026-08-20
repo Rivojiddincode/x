@@ -185,7 +185,8 @@ const PRICE_CACHE_TTL_MS = 10 * 60 * 1000;
 
 /**
  * Steam Community Market'dan berilgan item uchun hozirgi (eng past sotuv) narxini oladi.
- * currency=1 => USD.
+ * currency=507 => UZS — Steam rasmiy ravishda UZS ni qo'llab-quvvatlaydi.
+ * Qaytarilgan qiymat UZS da butun son (so'm).
  */
 export async function fetchMarketPrice(marketHashName) {
   const cached = priceCache.get(marketHashName);
@@ -193,7 +194,7 @@ export async function fetchMarketPrice(marketHashName) {
     return cached.price;
   }
 
-  const url = `https://steamcommunity.com/market/priceoverview/?appid=730&currency=1&market_hash_name=${encodeURIComponent(marketHashName)}`;
+  const url = `https://steamcommunity.com/market/priceoverview/?appid=730&currency=507&market_hash_name=${encodeURIComponent(marketHashName)}`;
   const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (StarsCS Price Fetcher)' } });
 
   if (!res.ok) {
@@ -202,10 +203,10 @@ export async function fetchMarketPrice(marketHashName) {
   }
 
   const data = await res.json();
-  // lowest_price masalan "$12.34" ko'rinishida keladi — raqamga o'giramiz
+  // lowest_price masalan "12 345 сўм" yoki "12345.00" ko'rinishida keladi — faqat raqamlarni olamiz
   const raw = data.lowest_price || data.median_price;
-  const numeric = raw ? Number(String(raw).replace(/[^0-9.]/g, '')) : null;
+  const numeric = raw ? Math.round(Number(String(raw).replace(/[^0-9.]/g, ''))) : null;
 
   priceCache.set(marketHashName, { price: numeric, fetchedAt: Date.now() });
-  return numeric;
+  return numeric; // UZS
 }

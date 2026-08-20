@@ -44,7 +44,7 @@ function TermsContent() {
         <p style={P_STYLE}>
           Skin sotish/sotib olish — foydalanuvchilar o'rtasidagi (P2P) bitim bo'lib, StarsCS bot vositachi (escrow)
           sifatida ishtirok etadi. Barcha narxlar sobit (fixed) — tasodifiy natijaga asoslangan xarid (case opening,
-          gambling) saytda mavjud emas va bo'lmaydi. Minimal sotuv narxi — $0.5.
+          gambling) saytda mavjud emas va bo'lmaydi. Minimal sotuv narxi — 6 500 UZS.
         </p>
       </div>
       <div style={SECTION_STYLE}>

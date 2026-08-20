@@ -95,8 +95,8 @@ export function SkinMarketView({ user, onToast }) {
       .then((r) => r.json())
       .then((data) => {
         if (data.success && data.price) {
-          setSuggestedPrice(data.price);
-          setListPrice(data.price.toFixed(2));
+          setSuggestedPrice(data.price); // UZS
+          setListPrice(String(Math.round(data.price)));
         }
       })
       .catch(() => {})
@@ -149,8 +149,8 @@ export function SkinMarketView({ user, onToast }) {
   const createListing = async () => {
     if (!selectedItem) return;
     const price = Number(listPrice);
-    if (!price || price < 0.5) {
-      return onToast?.('Minimal narx $0.5');
+    if (!price || price < 6500) {
+      return onToast?.('Minimal narx 6 500 UZS');
     }
     setCreatingListing(true);
     try {
@@ -521,7 +521,7 @@ function ShopTab({ listings, loading, onBuy, buyingId, onRefresh }) {
         {/* Chap panel — narx va rarity filtri */}
         <aside className="shop-sidebar">
           <div className="shop-filter-block">
-            <h4 className="shop-filter-title">Narx ($)</h4>
+            <h4 className="shop-filter-title">Narx (UZS)</h4>
             <div className="shop-price-range">
               <input type="number" placeholder="Dan" value={priceFrom} onChange={(e) => setPriceFrom(e.target.value)} />
               <span>—</span>
@@ -597,7 +597,7 @@ function ShopTab({ listings, loading, onBuy, buyingId, onRefresh }) {
                 const wear = getWearAbbrev(listing.marketHashName);
                 const isFav = favorites.includes(listing.id);
                 const qty = nameCounts[listing.marketHashName];
-                const isHighValue = listing.price >= 30; // qimmat item — porlaydigan fon
+                const isHighValue = listing.price >= 400000; // ~$30 — qimmat item, porlaydigan fon
 
                 return (
                   <div
@@ -627,7 +627,7 @@ function ShopTab({ listings, loading, onBuy, buyingId, onRefresh }) {
                     </p>
                     <div className="skin-card-footer">
                       <span style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
-                        <span className="skin-card-price">${listing.price.toFixed(2)}</span>
+                        <span className="skin-card-price">{Number(listing.price).toLocaleString()} UZS</span>
                         {qty > 1 && <span className="skin-card-qty">x{qty}</span>}
                       </span>
                       <button
@@ -773,7 +773,7 @@ function SellTab({
               'Steam Market\'dan hozirgi narx tekshirilmoqda...'
             ) : suggestedPrice ? (
               <span>
-                Steam Market'dagi hozirgi narx: <b style={{ color: 'var(--money)' }}>${suggestedPrice.toFixed(2)}</b>
+                Steam Market'dagi hozirgi narx: <b style={{ color: 'var(--money)' }}>{Number(suggestedPrice).toLocaleString()} UZS</b>
                 {' '}— narx maydoni shunga qarab avtomatik to'ldirildi, xohlasangiz o'zgartiring.
               </span>
             ) : (
@@ -784,11 +784,11 @@ function SellTab({
           <div style={{ display: 'flex', gap: '10px', marginTop: '8px', flexWrap: 'wrap' }}>
             <input
               type="number"
-              min="0.5"
-              step="0.01"
+              min="6500"
+              step="100"
               value={listPrice}
               onChange={(e) => setListPrice(e.target.value)}
-              placeholder="Narx ($), min 0.5"
+              placeholder="Narx (UZS), min 6 500"
               style={{ flex: 1, minWidth: '160px', padding: '10px 12px', borderRadius: '8px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--card-border)', color: '#fff', fontSize: '13px' }}
             />
             <button className="btn btn-wallet" onClick={onCreateListing} disabled={creatingListing}>
@@ -796,7 +796,7 @@ function SellTab({
             </button>
           </div>
           <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px' }}>
-            Minimal sotuv narxi: $0.5. Undan past narx serverda rad etiladi.
+            Minimal sotuv narxi: 6 500 UZS. Undan past narx serverda rad etiladi.
           </p>
 
           {suggestedPrice && (
@@ -809,7 +809,7 @@ function SellTab({
               >
                 <Zap size={15} /> {instantSelling
                   ? 'Yuborilmoqda...'
-                  : `Tezkor Sotish — darhol $${(suggestedPrice * 0.5).toFixed(2)}`}
+                  : `Tezkor Sotish — darhol ${Math.round(suggestedPrice * 0.5).toLocaleString()} UZS`}
               </button>
               <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px', textAlign: 'center' }}>
                 Xaridorni kutmasdan, bozor narxining 50%i darhol balansingizga tushadi.
