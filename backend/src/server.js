@@ -23,7 +23,27 @@ app.set('trust proxy', 1);
 const PORT = process.env.PORT || 5000;
 const STEAM_API_KEY = process.env.STEAM_API_KEY;
 
-app.use(cors());
+// Faqat aniq domenlardan kelgan so'rovlarga ruxsat beramiz — avval istalgan domendan
+// so'rov qabul qilinardi, bu endi cheklandi. FRONTEND_ORIGIN Render Environment'da
+// (masalan https://stars-shop.uz) sozlanishi kerak, aks holda faqat dev/localhost ishlaydi.
+const allowedOrigins = [
+  process.env.FRONTEND_ORIGIN, // masalan: https://stars-shop.uz
+  'http://localhost:5173',
+  'http://localhost:5174',
+].filter(Boolean);
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // origin bo'lmasa (masalan server-to-server so'rov, curl, Postman) — ruxsat beramiz
+    if (!origin || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    console.warn(`[CORS] Ruxsat berilmagan domendan so'rov: ${origin}`);
+    return callback(new Error('CORS: bu domenga ruxsat berilmagan'));
+  },
+  credentials: true,
+}));
+
 app.use(express.json());
 app.use('/api/', generalLimiter); // barcha API uchun umumiy chegara
 
