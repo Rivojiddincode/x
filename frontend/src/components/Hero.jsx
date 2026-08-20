@@ -1,5 +1,6 @@
 import React from 'react';
 import { Flame, Server, Gauge } from 'lucide-react';
+import { SHOW_LIVE_SERVER_STATS } from '../config/features';
 
 export default function Hero({ totalOnline, serverCount = 9 }) {
   return (
@@ -21,7 +22,7 @@ export default function Hero({ totalOnline, serverCount = 9 }) {
 
       <div className="hero-content container">
         <div className="hero-eyebrow">
-          <span className="live-dot" /> LIVE &middot; O'ZBEKISTON CS2 TARMOG'I
+          <span className="live-dot" /> O'ZBEKISTON CS2 TARMOG'I
         </div>
 
         <h1 className="hero-title">
@@ -29,29 +30,31 @@ export default function Hero({ totalOnline, serverCount = 9 }) {
         </h1>
         <p className="hero-subtitle">O'zbekistondagi eng yirik CS2 serverlar tarmog'i va full-stack platformasi</p>
 
-        <div className="hero-stats">
-          <div className="stat-box stat-box-flame">
-            <Flame size={22} className="stat-icon" />
-            <div>
-              <div className="stat-val">{totalOnline}</div>
-              <div className="stat-label">Onlayn O'yinchilar</div>
+        {SHOW_LIVE_SERVER_STATS && (
+          <div className="hero-stats">
+            <div className="stat-box stat-box-flame">
+              <Flame size={22} className="stat-icon" />
+              <div>
+                <div className="stat-val">{totalOnline}</div>
+                <div className="stat-label">Onlayn O'yinchilar</div>
+              </div>
+            </div>
+            <div className="stat-box stat-box-server">
+              <Server size={22} className="stat-icon" />
+              <div>
+                <div className="stat-val">{serverCount}</div>
+                <div className="stat-label">CS2 Serverlar</div>
+              </div>
+            </div>
+            <div className="stat-box stat-box-tick">
+              <Gauge size={22} className="stat-icon" />
+              <div>
+                <div className="stat-val">128</div>
+                <div className="stat-label">Tickrate Fast SRV</div>
+              </div>
             </div>
           </div>
-          <div className="stat-box stat-box-server">
-            <Server size={22} className="stat-icon" />
-            <div>
-              <div className="stat-val">{serverCount}</div>
-              <div className="stat-label">CS2 Serverlar</div>
-            </div>
-          </div>
-          <div className="stat-box stat-box-tick">
-            <Gauge size={22} className="stat-icon" />
-            <div>
-              <div className="stat-val">128</div>
-              <div className="stat-label">Tickrate Fast SRV</div>
-            </div>
-          </div>
-        </div>
+        )}
       </div>
     </section>
   );

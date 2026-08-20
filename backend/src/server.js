@@ -340,6 +340,9 @@ app.get('/api/v1/auth/steam/user/:steamId', async (req, res) => {
 // Save or Update User Profile directly in Database
 app.post('/api/v1/auth/steam/sync', requireAuth, async (req, res) => {
   const steamId = req.user.steamId;
+  // MUHIM: balance va vipRole client'dan HECH QACHON qabul qilinmaydi — bular faqat
+  // server tomonidan (haqiqiy to'lov/VIP xarid endpoint'lari orqali) o'zgartiriladi.
+  // Aks holda, har kim o'ziga cheksiz balans/VIP bera olardi.
   const { displayName, avatarUrl } = req.body;
 
   try {
@@ -366,6 +369,37 @@ app.post('/api/v1/auth/steam/sync', requireAuth, async (req, res) => {
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
+});
+
+// ─── Global xato ushlagich ───────────────────────────────────────────────
+// Bu — ZANJIRDAGI ENG OXIRGI middleware bo'lishi kerak (barcha route'lardan keyin).
+// Agar biror route'da kutilmagan xato yuz bersa (masalan Prisma ulanish uzilishi),
+// bu yerda ushlanadi: foydalanuvchiga tushunarli xabar, serverga esa to'liq log yoziladi.
+// MUHIM: foydalanuvchiga hech qachon xato stack-trace yoki ichki tafsilotlar
+// ko'rsatilmaydi — bu xavfsizlik uchun muhim (ichki tuzilma oshkor bo'lmasligi kerak).
+app.use((err, req, res, next) => {
+  console.error(`[XATO] ${req.method} ${req.originalUrl}:`, err);
+  if (res.headersSent) return next(err);
+  res.status(500).json({
+    success: false,
+    message: 'Server xatosi yuz berdi. Birozdan keyin qayta urinib ko\'ring.',
+  });
+});
+
+// Noma'lum yo'l (route topilmasa) — standart Express "Cannot GET" o'rniga tushunarli JSON
+app.use((req, res) => {
+  res.status(404).json({ success: false, message: 'So\'ralgan manzil topilmadi' });
+});
+
+// Kutilmagan (ushlanmagan) xatolar — serverni "jim" yiqilib qolishdan saqlaydi,
+// to'liq log yozadi. uncaughtException'dan keyin holat noaniq bo'lishi mumkin,
+// shuning uchun process'ni tugatamiz — Render buni avtomatik qayta ishga tushiradi.
+process.on('unhandledRejection', (reason) => {
+  console.error('[UNHANDLED REJECTION]', reason);
+});
+process.on('uncaughtException', (err) => {
+  console.error('[UNCAUGHT EXCEPTION] Server qayta ishga tushirilmoqda:', err);
+  process.exit(1);
 });
 
 app.listen(PORT, () => {
