@@ -3,6 +3,7 @@ import express from 'express';
 import { PrismaClient } from '@prisma/client';
 import { requireAuth } from '../middleware/auth.js';
 import { sensitiveActionLimiter } from '../middleware/rateLimit.js';
+import { checkNotBanned } from '../middleware/ban.js';
 
 const prisma = new PrismaClient();
 const router = express.Router();
@@ -55,7 +56,7 @@ router.get('/tiers', (req, res) => {
   res.json({ success: true, tiers });
 });
 
-router.post('/purchase', requireAuth, sensitiveActionLimiter, async (req, res) => {
+router.post('/purchase', requireAuth, checkNotBanned, sensitiveActionLimiter, async (req, res) => {
   const steamId = req.user.steamId;
   const { tierId } = req.body;
 

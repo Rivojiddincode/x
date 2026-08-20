@@ -10,7 +10,6 @@ import { ProfileView } from './components/ProfileView';
 import { SkinMarketView } from './components/SkinMarketView';
 import { AdminView } from './components/AdminView';
 import { Footer } from './components/Footer';
-import BottomNav from './components/BottomNav';
 import { LegalModal } from './components/LegalPages';
 import './styles/main.css';
 
@@ -24,6 +23,7 @@ export default function App() {
   const [bans, setBans] = useState([]);
   const [toast, setToast] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [banStatus, setBanStatus] = useState(null); // null | { reason, expiresAt, permanent }
   const [legalModal, setLegalModal] = useState(null); // null | 'terms' | 'privacy'
   
   // inPAY Modal State
@@ -69,25 +69,9 @@ export default function App() {
             return;
           }
           if (d.status === 'success') {
-            showToastMsg(`✅ To'lov muvaffaqiyatli! Balansingiz ${Number(d.amount).toLocaleString()} UZS qo'shildi.`);
+            showToastMsg(`✅ To'lov muvaffaqiyatli! Balansingiz ${Number(d.amount).toLocaleString()} UZS'ga to'ldi.`);
+            setUser((prev) => prev ? { ...prev, balance: (prev.balance || 0) + Number(d.amount) } : prev);
             localStorage.removeItem('starscs_pending_order');
-            // DB'dan haqiqiy (yangilangan) balansni o'qib kelamiz — localStorage'dagi
-            // eski qiymatga ishonmaslik uchun (masalan, boshqa qurilmadan to'lov bo'lsa)
-            const savedSteamId = localStorage.getItem('starscs_steam_id');
-            if (savedSteamId) {
-              fetch(`${API_BASE}/auth/steam/user/${savedSteamId}`)
-                .then((r) => r.json())
-                .then((data) => {
-                  if (data.success && data.user) {
-                    setUser(data.user);
-                    localStorage.setItem('starscs_user', JSON.stringify(data.user));
-                  }
-                })
-                .catch(() => {
-                  // Fallback: agar API javob bermasa, hisob qo'shish
-                  setUser((prev) => prev ? { ...prev, balance: (prev.balance || 0) + Number(d.amount) } : prev);
-                });
-            }
           } else if (d.status === 'pending' && attempts < 5) {
             setTimeout(checkStatus, 4000); // 4 soniyadan keyin qayta urinib ko'ramiz (jami ~20 soniya)
           } else {
@@ -174,6 +158,13 @@ export default function App() {
       .catch(() => setIsAdmin(false));
   }, [user?.steamId]);
 
+  useEffect(() => {
+    if (!user) { setBanStatus(null); return; }
+    authFetch('/auth/ban-status')
+      .then((d) => setBanStatus(d.banned ? d : null))
+      .catch(() => setBanStatus(null));
+  }, [user?.steamId]);
+
   const handleLogout = () => {
     setUser(null);
     localStorage.removeItem('starscs_user');
@@ -242,7 +233,6 @@ export default function App() {
         setInpayError(res.message || "To'lov yaratishda xatolik");
       }
     } catch (err) {
-      // Render bepul plan'da server uxlab qoladi — birinchi so'rovda 30-60s kechikish bo'ladi
       setInpayError("Server javob bermadi. Iltimos 30 soniya kuting va qayta urining.");
     } finally {
       setInpayLoading(false);
@@ -272,7 +262,6 @@ export default function App() {
       showToastMsg("Serverga ulanib bo'lmadi");
     }
   };
-
 
   const handleSteamLogin = async () => {
     try {
@@ -316,6 +305,20 @@ export default function App() {
         user={user}
         isAdmin={isAdmin}
       />
+
+      {banStatus && (
+        <div style={{
+          background: 'rgba(239, 68, 68, 0.15)',
+          borderBottom: '1px solid rgba(239, 68, 68, 0.4)',
+          padding: '12px 20px',
+          textAlign: 'center',
+          fontSize: '13px',
+          color: '#fca5a5',
+        }}>
+          🚫 Hisobingiz {banStatus.permanent ? 'doimiy' : `${new Date(banStatus.expiresAt).toLocaleDateString('uz-UZ')}gacha`} bloklangan.
+          {' '}Sabab: <b>{banStatus.reason}</b>. Skin sotish/sotib olish va VIP xarid qilish vaqtincha mavjud emas.
+        </div>
+      )}
 
       {/* Hero Section */}
       {activeTab === 'servers' && <Hero totalOnline={totalOnline} serverCount={servers.length} />}
@@ -361,9 +364,6 @@ export default function App() {
           />
         )}
       </main>
-
-      {/* Mobile Bottom Navigation */}
-      <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
 
       {/* inPAY Checkout Modal */}
       {showInpayModal && (

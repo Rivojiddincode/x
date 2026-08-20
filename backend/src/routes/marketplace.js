@@ -7,6 +7,7 @@ import { fetchInventory, parseTradeUrl, isTradeUrlOwnedBySteamId, fetchMarketPri
 import { requestItemFromSeller, sendItemToBuyer, onOfferStateChanged, isBotReady } from '../services/steamBot.js';
 import { requireAuth } from '../middleware/auth.js';
 import { sensitiveActionLimiter } from '../middleware/rateLimit.js';
+import { checkNotBanned } from '../middleware/ban.js';
 
 const prisma = new PrismaClient();
 const router = express.Router();
@@ -16,7 +17,7 @@ const MIN_PRICE = 0.5;
 // ---------------------------------------------------------
 // 1. Foydalanuvchi trade link'ini saqlash
 // ---------------------------------------------------------
-router.post('/trade-url', requireAuth, async (req, res) => {
+router.post('/trade-url', requireAuth, checkNotBanned, async (req, res) => {
   const steamId = req.user.steamId; // endi req.body dan emas — tokendan olinadi, soxtalashtirib bo'lmaydi
   const { tradeUrl } = req.body;
   if (!tradeUrl) {
@@ -106,9 +107,9 @@ router.get('/float', async (req, res) => {
 // ---------------------------------------------------------
 // 3. Sotuvga qo'yish (Listing yaratish)
 // ---------------------------------------------------------
-router.post('/listings', requireAuth, sensitiveActionLimiter, async (req, res) => {
+router.post('/listings', requireAuth, checkNotBanned, sensitiveActionLimiter, async (req, res) => {
   const sellerSteamId = req.user.steamId;
-  const { assetId, classId, instanceId, marketHashName, iconUrl, price } = req.body;
+  const { assetId, classId, instanceId, marketHashName, iconUrl, price, weaponType } = req.body;
 
   if (!assetId || !price) {
     return res.status(400).json({ success: false, message: 'Majburiy maydonlar to\'ldirilmagan' });
@@ -130,6 +131,7 @@ router.post('/listings', requireAuth, sensitiveActionLimiter, async (req, res) =
       classId,
       instanceId,
       marketHashName,
+      weaponType,
       iconUrl,
       price: Number(price),
       status: 'ACTIVE',
@@ -160,7 +162,7 @@ router.get('/listings', async (req, res) => {
 // ---------------------------------------------------------
 const INSTANT_SELL_RATE = 0.5;
 
-router.post('/instant-sell', requireAuth, sensitiveActionLimiter, async (req, res) => {
+router.post('/instant-sell', requireAuth, checkNotBanned, sensitiveActionLimiter, async (req, res) => {
   const sellerSteamId = req.user.steamId;
   const { assetId, classId, instanceId, marketHashName, iconUrl } = req.body;
 
@@ -221,7 +223,7 @@ router.post('/instant-sell', requireAuth, sensitiveActionLimiter, async (req, re
 // ---------------------------------------------------------
 // 5. Sotib olish — escrow oqimini boshlaydi
 // ---------------------------------------------------------
-router.post('/listings/:id/buy', requireAuth, sensitiveActionLimiter, async (req, res) => {
+router.post('/listings/:id/buy', requireAuth, checkNotBanned, sensitiveActionLimiter, async (req, res) => {
   const listingId = Number(req.params.id);
   const buyerSteamId = req.user.steamId;
 

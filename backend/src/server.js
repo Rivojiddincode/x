@@ -6,6 +6,7 @@ import { db } from './services/db.js';
 import marketRouter, { registerTradeStateWatcher, startEscrowReleaseChecker } from './routes/marketplace.js';
 import { startBot } from './services/steamBot.js';
 import { generateToken, requireAuth } from './middleware/auth.js';
+import { getBanStatus } from './middleware/ban.js';
 import vipRouter, { VIP_TIERS } from './routes/vip.js';
 import adminRouter from './routes/admin.js';
 import paymentsRouter from './routes/payments.js';
@@ -44,6 +45,12 @@ app.use('/api/v1/admin', adminRouter);
 // inPAY to'lov routes (create invoice, webhook, status polling)
 app.use('/api/v1/payments/inpay', paymentsRouter);
 
+// Ban holatini tekshirish — frontend login'dan keyin shu orqali banner ko'rsatadi
+app.get('/api/v1/auth/ban-status', requireAuth, async (req, res) => {
+  const status = await getBanStatus(req.user.steamId);
+  res.json({ success: true, ...status });
+});
+
 // Health check — inPAY konfiguratsiyasini ham tekshiradi
 app.get('/api/v1/health', (req, res) => {
   const inpayMerchantId = process.env.INPAY_MERCHANT_ID;
@@ -61,7 +68,6 @@ app.get('/api/v1/health', (req, res) => {
     timestamp: new Date().toISOString() 
   });
 });
-
 
 // Servers API
 app.get('/api/v1/servers', (req, res) => {
@@ -314,9 +320,6 @@ app.get('/api/v1/auth/steam/user/:steamId', async (req, res) => {
 // Save or Update User Profile directly in Database
 app.post('/api/v1/auth/steam/sync', requireAuth, async (req, res) => {
   const steamId = req.user.steamId;
-  // MUHIM: balance va vipRole client'dan HECH QACHON qabul qilinmaydi — bular faqat
-  // server tomonidan (haqiqiy to'lov/VIP xarid endpoint'lari orqali) o'zgartiriladi.
-  // Aks holda, har kim o'ziga cheksiz balans/VIP bera olardi.
   const { displayName, avatarUrl } = req.body;
 
   try {
