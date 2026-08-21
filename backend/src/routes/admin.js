@@ -114,21 +114,56 @@ router.get('/users', async (req, res) => {
 });
 
 router.patch('/users/:steamId', async (req, res) => {
-  const { balance, vipRole, kills, deaths, score, level, headshotPct, winRate } = req.body;
-  const data = {};
-  // Faqat aniq yuborilgan maydonlar yangilanadi
-  if (balance !== undefined) data.balance = Math.round(Number(balance));
-  if (vipRole !== undefined) data.vipRole = vipRole;
-  if (kills !== undefined) data.kills = Number(kills);
-  if (deaths !== undefined) data.deaths = Number(deaths);
-  if (score !== undefined) data.score = Number(score);
-  if (level !== undefined) data.level = Number(level);
-  if (headshotPct !== undefined) data.headshotPct = Number(headshotPct);
-  if (winRate !== undefined) data.winRate = Number(winRate);
+  try {
+    const { steamId } = req.params;
+    const { balance, vipRole, kills, deaths, score, level, headshotPct, winRate } = req.body;
 
-  const user = await prisma.user.update({ where: { steamId: req.params.steamId }, data }).catch(() => null);
-  if (!user) return res.status(404).json({ success: false, message: 'Foydalanuvchi topilmadi' });
-  res.json({ success: true, user });
+    const existingUser = await prisma.user.findUnique({ where: { steamId } });
+    if (!existingUser) {
+      return res.status(404).json({ success: false, message: 'Foydalanuvchi topilmadi' });
+    }
+
+    const data = {};
+    if (balance !== undefined && balance !== '') {
+      const num = Math.round(Number(balance));
+      if (!isNaN(num)) data.balance = num;
+    }
+    if (vipRole !== undefined) data.vipRole = String(vipRole);
+    if (kills !== undefined && kills !== '') {
+      const num = Number(kills);
+      if (!isNaN(num)) data.kills = num;
+    }
+    if (deaths !== undefined && deaths !== '') {
+      const num = Number(deaths);
+      if (!isNaN(num)) data.deaths = num;
+    }
+    if (score !== undefined && score !== '') {
+      const num = Number(score);
+      if (!isNaN(num)) data.score = num;
+    }
+    if (level !== undefined && level !== '') {
+      const num = Number(level);
+      if (!isNaN(num)) data.level = num;
+    }
+    if (headshotPct !== undefined && headshotPct !== '') {
+      const num = Number(headshotPct);
+      if (!isNaN(num)) data.headshotPct = num;
+    }
+    if (winRate !== undefined && winRate !== '') {
+      const num = Number(winRate);
+      if (!isNaN(num)) data.winRate = num;
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { steamId },
+      data,
+    });
+
+    res.json({ success: true, user: updatedUser });
+  } catch (err) {
+    console.error('Error updating user:', err);
+    res.status(500).json({ success: false, message: 'Foydalanuvchini saqlashda xatolik: ' + err.message });
+  }
 });
 
 // ---------------------------------------------------------

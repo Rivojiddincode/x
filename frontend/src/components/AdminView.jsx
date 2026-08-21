@@ -249,16 +249,21 @@ function UsersTab({ onToast }) {
 
 function EditUserModal({ user, onClose, onSave }) {
   const [form, setForm] = useState({
-    balance: user.balance, vipRole: user.vipRole,
-    kills: user.kills, deaths: user.deaths, score: user.score, level: user.level,
-    headshotPct: user.headshotPct, winRate: user.winRate,
+    balance: user.balance ?? 0,
+    vipRole: user.vipRole ?? 'PLAYER',
+    kills: user.kills ?? 0,
+    deaths: user.deaths ?? 0,
+    score: user.score ?? 0,
+    level: user.level ?? 1,
+    headshotPct: user.headshotPct ?? 0,
+    winRate: user.winRate ?? 0,
   });
 
   const field = (key, label) => (
     <div style={{ marginBottom: '10px' }}>
       <label style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{label}</label>
       <input
-        type="number" value={form[key]}
+        type="number" value={form[key] ?? ''}
         onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
         style={{ width: '100%', padding: '8px', borderRadius: '6px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--card-border)', color: '#fff' }}
       />
@@ -276,7 +281,7 @@ function EditUserModal({ user, onClose, onSave }) {
         <div style={{ marginBottom: '10px' }}>
           <label style={{ fontSize: '11px', color: 'var(--text-muted)' }}>VIP Rol</label>
           <input
-            value={form.vipRole}
+            value={form.vipRole ?? ''}
             onChange={(e) => setForm((f) => ({ ...f, vipRole: e.target.value }))}
             style={{ width: '100%', padding: '8px', borderRadius: '6px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--card-border)', color: '#fff' }}
           />
