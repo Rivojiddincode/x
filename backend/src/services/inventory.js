@@ -203,9 +203,15 @@ export async function fetchMarketPrice(marketHashName) {
   }
 
   const data = await res.json();
-  // lowest_price masalan "12 345 сўм" yoki "12345.00" ko'rinishida keladi — faqat raqamlarni olamiz
+  // lowest_price masalan "65 400,00 UZS" yoki "65 400 p." ko'rinishida keladi.
+  // Vergul tiyin ajratgichi bo'lgani uchun avval nuqtaga o'tkaziladi, keyin faqat raqam va nuqta olinadi.
   const raw = data.lowest_price || data.median_price;
-  const numeric = raw ? Math.round(Number(String(raw).replace(/[^0-9.]/g, ''))) : null;
+  let numeric = null;
+  if (raw) {
+    const cleaned = String(raw).trim().replace(/,([0-9]{2})$/, '.$1').replace(/[^0-9.]/g, '');
+    const val = Number(cleaned);
+    if (!isNaN(val)) numeric = Math.round(val);
+  }
 
   priceCache.set(marketHashName, { price: numeric, fetchedAt: Date.now() });
   return numeric; // UZS
