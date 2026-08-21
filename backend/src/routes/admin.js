@@ -123,35 +123,39 @@ router.patch('/users/:steamId', async (req, res) => {
       return res.status(404).json({ success: false, message: 'Foydalanuvchi topilmadi' });
     }
 
+    const MAX_INT4 = 2147483647;
+    const MIN_INT4 = -2147483648;
+    const clampInt = (val) => Math.max(MIN_INT4, Math.min(MAX_INT4, val));
+
     const data = {};
     if (balance !== undefined && balance !== '') {
       const num = Math.round(Number(balance));
-      if (!isNaN(num)) data.balance = num;
+      if (!isNaN(num)) data.balance = clampInt(num);
     }
     if (vipRole !== undefined) data.vipRole = String(vipRole);
     if (kills !== undefined && kills !== '') {
-      const num = Number(kills);
-      if (!isNaN(num)) data.kills = num;
+      const num = Math.round(Number(kills));
+      if (!isNaN(num)) data.kills = clampInt(num);
     }
     if (deaths !== undefined && deaths !== '') {
-      const num = Number(deaths);
-      if (!isNaN(num)) data.deaths = num;
+      const num = Math.round(Number(deaths));
+      if (!isNaN(num)) data.deaths = clampInt(num);
     }
     if (score !== undefined && score !== '') {
-      const num = Number(score);
-      if (!isNaN(num)) data.score = num;
+      const num = Math.round(Number(score));
+      if (!isNaN(num)) data.score = clampInt(num);
     }
     if (level !== undefined && level !== '') {
-      const num = Number(level);
-      if (!isNaN(num)) data.level = num;
+      const num = Math.round(Number(level));
+      if (!isNaN(num)) data.level = clampInt(num);
     }
     if (headshotPct !== undefined && headshotPct !== '') {
       const num = Number(headshotPct);
-      if (!isNaN(num)) data.headshotPct = num;
+      if (!isNaN(num)) data.headshotPct = Math.max(0, Math.min(100, num));
     }
     if (winRate !== undefined && winRate !== '') {
       const num = Number(winRate);
-      if (!isNaN(num)) data.winRate = num;
+      if (!isNaN(num)) data.winRate = Math.max(0, Math.min(100, num));
     }
 
     const updatedUser = await prisma.user.update({
