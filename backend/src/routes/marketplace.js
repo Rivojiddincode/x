@@ -165,12 +165,41 @@ router.get('/listings', async (req, res) => {
   try {
     const listings = await prisma.skinListing.findMany({
       where: { status: 'ACTIVE' },
-      include: { seller: { select: { displayName: true, avatarUrl: true } } },
+      include: { seller: { select: { id: true, displayName: true, avatarUrl: true, steamId: true } } },
       orderBy: { createdAt: 'desc' },
     });
     res.json({ success: true, listings });
   } catch (e) {
     res.json({ success: true, listings: [] });
+  }
+});
+
+// ---------------------------------------------------------
+// 4a. Sotuvdan olib tashlash (Listingni bekor qilish)
+// ---------------------------------------------------------
+router.delete('/listings/:id', requireAuth, checkNotBanned, async (req, res) => {
+  try {
+    const listingId = Number(req.params.id);
+    const sellerSteamId = req.user.steamId;
+
+    const seller = await prisma.user.findUnique({ where: { steamId: sellerSteamId } });
+    if (!seller) return res.status(404).json({ success: false, message: 'Foydalanuvchi topilmadi' });
+
+    const listing = await prisma.skinListing.findUnique({ where: { id: listingId } });
+    if (!listing) return res.status(404).json({ success: false, message: 'Item topilmadi' });
+
+    if (listing.sellerId !== seller.id) {
+      return res.status(403).json({ success: false, message: 'Faqat o\'zingizning itemingizni sotuvdan ola olasiz' });
+    }
+
+    if (listing.status !== 'ACTIVE') {
+      return res.status(400).json({ success: false, message: 'Bu item hozir sotuvda emas yoki allaqachon sotilgan' });
+    }
+
+    await prisma.skinListing.delete({ where: { id: listingId } });
+    res.json({ success: true, message: 'Skin sotuvdan olib tashlandi' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Sotuvdan olishda xatolik: ' + err.message });
   }
 });
 

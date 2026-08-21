@@ -250,6 +250,25 @@ export function SkinMarketView({ user, onToast }) {
     }
   };
 
+  const [cancellingId, setCancellingId] = useState(null);
+  const cancelListing = async (listingId) => {
+    if (!user) return onToast?.('Avval Steam orqali kiring');
+    setCancellingId(listingId);
+    try {
+      const data = await authFetch(`/market/listings/${listingId}`, { method: 'DELETE' });
+      if (data.success) {
+        onToast?.(data.message || 'Skin sotuvdan olindi');
+        fetchListings();
+      } else {
+        onToast?.(data.message || 'Sotuvdan olib bo\'lmadi');
+      }
+    } catch (e) {
+      onToast?.('Serverga ulanib bo\'lmadi');
+    } finally {
+      setCancellingId(null);
+    }
+  };
+
   return (
     <div>
       {/* Sub-navigation: Shop vs Sell */}
@@ -269,7 +288,16 @@ export function SkinMarketView({ user, onToast }) {
       </div>
 
       {subTab === 'shop' && (
-        <ShopTab listings={listings} loading={loadingListings} onBuy={buyListing} buyingId={buyingId} onRefresh={fetchListings} />
+        <ShopTab
+          user={user}
+          listings={listings}
+          loading={loadingListings}
+          onBuy={buyListing}
+          buyingId={buyingId}
+          onCancel={cancelListing}
+          cancellingId={cancellingId}
+          onRefresh={fetchListings}
+        />
       )}
 
       {subTab === 'sell' && (
@@ -399,7 +427,7 @@ function getRarityTier(weaponType = '') {
   return RARITY_TIERS.find((r) => r.match(weaponType)) || null;
 }
 
-function ShopTab({ listings, loading, onBuy, buyingId, onRefresh }) {
+function ShopTab({ user, listings, loading, onBuy, buyingId, onCancel, cancellingId, onRefresh }) {
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState('newest');
   const [category, setCategory] = useState('all');
@@ -642,13 +670,24 @@ function ShopTab({ listings, loading, onBuy, buyingId, onRefresh }) {
                         <span className="skin-card-price">{Number(listing.price).toLocaleString()} UZS</span>
                         {qty > 1 && <span className="skin-card-qty">x{qty}</span>}
                       </span>
-                      <button
-                        className="btn btn-wallet"
-                        disabled={buyingId === listing.id}
-                        onClick={() => onBuy(listing)}
-                      >
-                        {buyingId === listing.id ? '...' : 'Sotib olish'}
-                      </button>
+                      {user && (listing.sellerId === user.id || listing.seller?.steamId === user.steamId) ? (
+                        <button
+                          className="btn btn-steam"
+                          style={{ borderColor: 'var(--red)', color: 'var(--red)', fontSize: '12px' }}
+                          disabled={cancellingId === listing.id}
+                          onClick={() => onCancel(listing.id)}
+                        >
+                          {cancellingId === listing.id ? '...' : 'Sotuvdan olish'}
+                        </button>
+                      ) : (
+                        <button
+                          className="btn btn-wallet"
+                          disabled={buyingId === listing.id}
+                          onClick={() => onBuy(listing)}
+                        >
+                          {buyingId === listing.id ? '...' : 'Sotib olish'}
+                        </button>
+                      )}
                     </div>
                   </div>
                 );
