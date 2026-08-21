@@ -194,6 +194,14 @@ router.post('/instant-sell', requireAuth, checkNotBanned, sensitiveActionLimiter
     return res.status(400).json({ success: false, message: 'Avval trade link kiriting' });
   }
 
+  // Duplicate tekshiruvi: shu assetId bilan ACTIVE yoki PENDING listing allaqachon bor bo'lsa, rad etamiz
+  const existingListing = await prisma.skinListing.findFirst({
+    where: { assetId, status: { in: ['ACTIVE', 'PENDING'] } },
+  });
+  if (existingListing) {
+    return res.status(409).json({ success: false, message: 'Bu skin allaqachon savdo jarayonida turibdi' });
+  }
+
   // marketPrice — Steam API dan UZS da keladi (currency=507)
   const marketPrice = await fetchMarketPrice(marketHashName);
   if (!marketPrice) {
@@ -271,11 +279,21 @@ router.post('/listings/:id/buy', requireAuth, checkNotBanned, sensitiveActionLim
     return res.status(400).json({ success: false, message: 'O\'z itemingizni sotib ola olmaysiz' });
   }
 
+  // MUHIM: atomic (shartli) update — faqat listing HALI HAM 'ACTIVE' bo'lsa PENDING'ga o'tkazamiz.
+  // Agar count === 0 bo'lsa, boshqa so'rov (millisekundlar oldin) buni allaqachon egallagan —
+  // ikki xaridor bir itemni bir vaqtda sotib olishining oldini shunday olamiz.
+  const lockResult = await prisma.skinListing.updateMany({
+    where: { id: listing.id, status: 'ACTIVE' },
+    data: { status: 'PENDING' },
+  });
+  if (lockResult.count === 0) {
+    return res.status(409).json({ success: false, message: 'Bu item hozirgina boshqa xaridor tomonidan sotib olindi' });
+  }
+
   await prisma.user.update({
     where: { id: buyer.id },
     data: { balance: { decrement: listing.price } },
   });
-  await prisma.skinListing.update({ where: { id: listing.id }, data: { status: 'PENDING' } });
 
   const tx = await prisma.skinTransaction.create({
     data: {
