@@ -8,10 +8,16 @@
 
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'starscs-fallback-secret-key-2026';
 if (!process.env.JWT_SECRET) {
-  console.warn('[auth] OGOHLANTIRISH: JWT_SECRET .env da topilmadi! Standart fallback secret ishlatilmoqda.');
+  if (process.env.NODE_ENV === 'production') {
+    console.error('[auth] XATOLIK: JWT_SECRET production muhitida o\'rnatilmagan! Server xavfsizlik yuzasidan to\'xtatildi.');
+    process.exit(1);
+  } else {
+    console.warn('[auth] OGOHLANTIRISH: JWT_SECRET .env da topilmadi! Standart dev fallback secret ishlatilmoqda.');
+  }
 }
+
+const JWT_SECRET = process.env.JWT_SECRET || 'starscs-fallback-dev-secret-key-2026';
 
 const TOKEN_EXPIRY = '30d';
 

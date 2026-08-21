@@ -77,12 +77,13 @@ router.get('/bot-stock', async (req, res) => {
 
 router.post('/bot-stock/:id/resell', async (req, res) => {
   const { price } = req.body;
-  if (!price || Number(price) < 0.5) {
-    return res.status(400).json({ success: false, message: 'Narx kamida $0.5 bo\'lishi kerak' });
+  const parsedPrice = Math.round(Number(price));
+  if (!price || parsedPrice < 6500) {
+    return res.status(400).json({ success: false, message: 'Narx kamida 6 500 UZS bo\'lishi kerak' });
   }
   const listing = await prisma.skinListing.update({
     where: { id: Number(req.params.id) },
-    data: { status: 'ACTIVE', price: Number(price) },
+    data: { status: 'ACTIVE', price: parsedPrice },
   }).catch(() => null);
   if (!listing) return res.status(404).json({ success: false, message: 'Item topilmadi' });
   res.json({ success: true, listing });
@@ -108,7 +109,7 @@ router.patch('/users/:steamId', async (req, res) => {
   const { balance, vipRole, kills, deaths, score, level, headshotPct, winRate } = req.body;
   const data = {};
   // Faqat aniq yuborilgan maydonlar yangilanadi
-  if (balance !== undefined) data.balance = Number(balance);
+  if (balance !== undefined) data.balance = Math.round(Number(balance));
   if (vipRole !== undefined) data.vipRole = vipRole;
   if (kills !== undefined) data.kills = Number(kills);
   if (deaths !== undefined) data.deaths = Number(deaths);

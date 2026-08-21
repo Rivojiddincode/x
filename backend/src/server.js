@@ -2,7 +2,6 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import { PrismaClient } from '@prisma/client';
-import { db } from './services/db.js';
 import marketRouter, { registerTradeStateWatcher, startEscrowReleaseChecker } from './routes/marketplace.js';
 import { startBot } from './services/steamBot.js';
 import { generateToken, requireAuth } from './middleware/auth.js';

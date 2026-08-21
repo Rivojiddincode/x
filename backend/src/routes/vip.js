@@ -68,7 +68,20 @@ router.post('/purchase', requireAuth, checkNotBanned, sensitiveActionLimiter, as
   const user = await prisma.user.findUnique({ where: { steamId } });
   if (!user) return res.status(404).json({ success: false, message: 'Foydalanuvchi topilmadi' });
 
-  if (user.balance < tier.price) {
+  const expiresAt = new Date(Date.now() + tier.durationDays * 24 * 60 * 60 * 1000);
+
+  // MUHIM: Atomic updateMany — faqat foydalanuvchida HALI HAM balance >= tier.price bo'lsagina ayiramiz.
+  // Bu parallel/poyga holatida yuborilgan so'rovlar tufayli balans manfiy bo'lib qolishining oldini oladi.
+  const updateResult = await prisma.user.updateMany({
+    where: { steamId, balance: { gte: tier.price } },
+    data: {
+      balance: { decrement: tier.price },
+      vipRole: tier.name,
+      vipExpiresAt: expiresAt.toISOString(),
+    },
+  });
+
+  if (updateResult.count === 0) {
     return res.status(400).json({
       success: false,
       message: `Balans yetarli emas. Kerak: ${tier.price.toLocaleString()} UZS, mavjud: ${user.balance.toLocaleString()} UZS`,
@@ -77,16 +90,7 @@ router.post('/purchase', requireAuth, checkNotBanned, sensitiveActionLimiter, as
     });
   }
 
-  const expiresAt = new Date(Date.now() + tier.durationDays * 24 * 60 * 60 * 1000);
-
-  const updatedUser = await prisma.user.update({
-    where: { steamId },
-    data: {
-      balance: { decrement: tier.price },
-      vipRole: tier.name,
-      vipExpiresAt: expiresAt.toISOString(),
-    },
-  });
+  const updatedUser = await prisma.user.findUnique({ where: { steamId } });
 
   res.json({
     success: true,
