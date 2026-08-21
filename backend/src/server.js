@@ -298,10 +298,14 @@ app.get('/api/v1/auth/steam/callback', async (req, res) => {
   }
 });
 
-// Fetch Profile by Steam ID from Database
-app.get('/api/v1/auth/steam/user/:steamId', async (req, res) => {
+// Fetch Profile of Authenticated User
+app.get('/api/v1/auth/steam/user/:steamId', requireAuth, async (req, res) => {
   try {
     const { steamId } = req.params;
+
+    if (req.user.steamId !== steamId) {
+      return res.status(403).json({ success: false, message: "Faqat o'z profilingiz ma'lumotlarini ko'ra olasiz" });
+    }
 
     const existing = await prisma.user.findUnique({ where: { steamId } });
     if (existing) {
@@ -312,26 +316,7 @@ app.get('/api/v1/auth/steam/user/:steamId', async (req, res) => {
       });
     }
 
-    const steamApiUrl = `https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=${STEAM_API_KEY}&steamids=${steamId}`;
-    const response = await fetch(steamApiUrl);
-    const data = await response.json();
-
-    const player = data.response?.players?.[0];
-    const userRecord = await prisma.user.create({
-      data: {
-        steamId,
-        displayName: player ? player.personaname : `Player_${steamId.slice(-4)}`,
-        avatarUrl: player ? player.avatarfull : `https://api.dicebear.com/7.x/bottts/svg?seed=${steamId}`,
-        balance: 0,
-        vipRole: "Oddiy O'yinchi",
-      },
-    });
-
-    res.json({
-      success: true,
-      source: 'steam_api',
-      user: userRecord
-    });
+    return res.status(404).json({ success: false, message: 'Foydalanuvchi topilmadi' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

@@ -129,8 +129,7 @@ export default function App() {
     } else {
       const savedSteamId = localStorage.getItem('starscs_steam_id');
       if (savedSteamId) {
-        fetch(`${API_BASE}/auth/steam/user/${savedSteamId}`)
-          .then(res => res.json())
+        authFetch(`/auth/steam/user/${savedSteamId}`)
           .then(data => {
             if (data.success && data.user) {
               setUser(data.user);
