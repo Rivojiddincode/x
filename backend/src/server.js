@@ -240,6 +240,25 @@ app.get('/api/v1/auth/steam/callback', async (req, res) => {
   }
 
   try {
+    const openidMode = req.query['openid.mode'];
+    if (openidMode !== 'id_res') {
+      throw new Error("Steam avtorizatsiyasi bekor qilindi yoki yaroqsiz mode");
+    }
+
+    // Verify authentication with Steam OpenID server (anti-spoofing check)
+    const verificationParams = new URLSearchParams(req.query);
+    verificationParams.set('openid.mode', 'check_authentication');
+
+    const verifyRes = await fetch('https://steamcommunity.com/openid/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: verificationParams.toString(),
+    });
+    const verifyText = await verifyRes.text();
+    if (!verifyText.includes('is_valid:true')) {
+      throw new Error("Steam OpenID verifikatsiyasi muvaffaqiyatsiz (soxtalashtirilgan so'rov)");
+    }
+
     const claimedId = req.query['openid.claimed_id'] || req.query['openid.identity'] || '';
     let steamId64 = '';
 

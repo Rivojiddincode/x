@@ -183,7 +183,11 @@ export function SkinMarketView({ user, onToast }) {
   };
 
   const pollTransactionStatus = (transactionId) => {
+    let attempts = 0;
+    const MAX_ATTEMPTS = 30; // 30 * 5s = 150s (2.5 daqiqa max)
+
     const poll = async () => {
+      attempts += 1;
       try {
         const res = await fetch(`${API_BASE}/market/transactions/${transactionId}`);
         const data = await res.json();
@@ -208,10 +212,16 @@ export function SkinMarketView({ user, onToast }) {
           notifyBackground('StarsCS', msg);
           return;
         }
-        // Hali jarayonda — 5 soniyadan keyin qayta tekshiramiz
-        setTimeout(poll, 5000);
+
+        if (attempts < MAX_ATTEMPTS) {
+          setTimeout(poll, 5000);
+        } else {
+          onToast?.('Bitim holatini tekshirish vaqti tugadi. Qaytadan yuklab tekshiring.');
+        }
       } catch (e) {
-        // jim o'tkazamiz — keyingi pollda qayta urinamiz
+        if (attempts < MAX_ATTEMPTS) {
+          setTimeout(poll, 5000);
+        }
       }
     };
     poll();
@@ -443,8 +453,10 @@ function ShopTab({ listings, loading, onBuy, buyingId, onRefresh }) {
       const q = search.trim().toLowerCase();
       result = result.filter((l) => l.marketHashName.toLowerCase().includes(q));
     }
-    if (priceFrom) result = result.filter((l) => l.price >= Number(priceFrom));
-    if (priceTo) result = result.filter((l) => l.price <= Number(priceTo));
+    const numFrom = Number(priceFrom);
+    if (priceFrom && Number.isFinite(numFrom)) result = result.filter((l) => l.price >= numFrom);
+    const numTo = Number(priceTo);
+    if (priceTo && Number.isFinite(numTo)) result = result.filter((l) => l.price <= numTo);
     if (rarityFilter.length > 0) {
       result = result.filter((l) => {
         const tier = getRarityTier(l.weaponType);
