@@ -88,15 +88,33 @@ app.get('/api/v1/health', (req, res) => {
   });
 });
 
-// Servers API
-app.get('/api/v1/servers', (req, res) => {
+const DEFAULT_SERVERS = [
+  { id: "5x5", name: "StarsCS | 5x5 COMPETITIVE #1 [TICK 128]", mode: "5x5", ip: "185.178.47.10:27015", map: "de_dust2", onlinePlayers: 87, maxPlayers: 100, ping: 5, badge: "HOT" },
+  { id: "retake", name: "StarsCS | RETAKE RETRY #1 [FAST RESPAWN]", mode: "RETAKE", ip: "185.178.47.11:27015", map: "de_mirage", onlinePlayers: 18, maxPlayers: 20, ping: 7, badge: "POPULAR" },
+  { id: "duels", name: "StarsCS | 1v1 DUELS ARENA [RANKED]", mode: "DUELS", ip: "185.178.47.12:27015", map: "am_aim_texture", onlinePlayers: 24, maxPlayers: 32, ping: 4, badge: "RANKED" },
+  { id: "dm", name: "StarsCS | FFA DEATHMATCH [ONLY HS / MULTI-CFG]", mode: "DM", ip: "185.178.47.13:27015", map: "de_inferno", onlinePlayers: 22, maxPlayers: 24, ping: 6, badge: "AIM" },
+  { id: "awp", name: "StarsCS | AWP LEGO 2 [FAST RELOAD + VIP SKINS]", mode: "AWP", ip: "185.178.47.14:27015", map: "awp_lego_2", onlinePlayers: 26, maxPlayers: 30, ping: 5, badge: "SNIPER" },
+  { id: "minigame", name: "StarsCS | MINIGAMES & MANIAC FUN", mode: "MINIGAME", ip: "185.178.47.15:27015", map: "mg_course_v3", onlinePlayers: 32, maxPlayers: 40, ping: 8, badge: "FUN" },
+  { id: "bhop", name: "StarsCS | BHOP & KZ MOVEMENT [GLOBAL TIMER]", mode: "BHOP & KZ", ip: "185.178.47.16:27015", map: "bhop_badges", onlinePlayers: 12, maxPlayers: 20, ping: 6, badge: "SKILL" },
+  { id: "surf", name: "StarsCS | SURF UTOPIA [STAGED & TIMER]", mode: "SURF", ip: "185.178.47.17:27015", map: "surf_utopia_v3", onlinePlayers: 15, maxPlayers: 24, ping: 7, badge: "SURF" },
+  { id: "modellar", name: "StarsCS | CUSTOM MODELS & SKINS 5v5", mode: "MODELLAR", ip: "185.178.47.18:27015", map: "de_anubis", onlinePlayers: 17, maxPlayers: 20, ping: 5, badge: "CUSTOM" },
+];
+
+// Servers API — Prisma GameServer jadvalidan yoki zaxira serverlar ro'yxatidan
+app.get('/api/v1/servers', async (req, res) => {
   const { mode } = req.query;
-  let result = db.servers;
-  if (mode && mode !== 'all') {
-    result = result.filter(s => s.mode.toLowerCase() === mode.toLowerCase());
+  try {
+    const dbServers = await prisma.gameServer.findMany().catch(() => []);
+    let serverList = dbServers.length > 0 ? dbServers : DEFAULT_SERVERS;
+
+    if (mode && mode !== 'all') {
+      serverList = serverList.filter(s => s.mode.toLowerCase() === mode.toLowerCase());
+    }
+    const totalOnline = serverList.reduce((sum, s) => sum + s.onlinePlayers, 0);
+    res.json({ success: true, totalOnline, servers: serverList });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
-  const totalOnline = db.servers.reduce((sum, s) => sum + s.onlinePlayers, 0);
-  res.json({ success: true, totalOnline, servers: result });
 });
 
 // Store API — VIP tariflari endi vip.js'dagi yagona manbadan keladi (narx mos kelmasligi bo'lmaydi)
