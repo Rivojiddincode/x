@@ -13,9 +13,10 @@ const router = express.Router();
 // Auth talab qilinadi — faqat tizimga kirgan foydalanuvchilar to'lay oladi.
 router.post('/create', requireAuth, sensitiveActionLimiter, async (req, res) => {
   const steamId = req.user.steamId;
+  const { amount, paymentMethod } = req.body;
   const parsedAmount = Math.round(Number(amount));
 
-  if (!amount || parsedAmount < 1000) {
+  if (!amount || isNaN(parsedAmount) || parsedAmount < 1000) {
     return res.status(400).json({
       success: false,
       message: "Minimal to'lov summasi 1 000 UZS",

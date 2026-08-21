@@ -282,8 +282,10 @@ export default function App() {
     try {
       const res = await apiClient.submitRequest(reqForm);
       if (res.success) {
-        showToastMsg('Murojaatingiz backend serverga qabul qilindi!');
+        showToastMsg('Murojaatingiz qabul qilindi!');
         setReqForm({ name: '', telegram: '', type: 'admin', message: '' });
+      } else {
+        showToastMsg(res.message || 'Murojaat yuborishda xatolik');
       }
     } catch (e) {
       showToastMsg('Murojaat yuborishda xatolik');
@@ -459,7 +461,7 @@ export default function App() {
                 disabled={inpayLoading}
                 style={{ width: '100%', marginTop: '4px', opacity: inpayLoading ? 0.7 : 1 }}
               >
-                {inpayLoading ? '⏳ Yuklanmoqda...' : `💳 To'lovga O'tish — ${Number(inpayAmount).toLocaleString()} UZS`}
+                {inpayLoading ? '⏳ Yuklanmoqda...' : `💳 To'lovga O'tish — ${(Number(inpayAmount) || 0).toLocaleString()} UZS`}
               </button>
 
               <p style={{ textAlign: 'center', fontSize: '11px', color: 'var(--text-muted)', marginTop: '12px' }}>
