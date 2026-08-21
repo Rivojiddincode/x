@@ -488,6 +488,17 @@ export function startEscrowReleaseChecker() {
         });
       } catch (err) {
         console.error(`[market] Escrow tugagan bitim #${tx.id}ni xaridorga jo'natishda xato:`, err.message);
+        // Repeated spam olini olish: xatolik bo'lsa transaction statusini admin ko'rib chiqishi uchun belgilaymiz va xaridorga pulni qaytaramiz
+        await prisma.$transaction([
+          prisma.skinTransaction.update({
+            where: { id: tx.id },
+            data: { status: 'NEEDS_ADMIN_REVIEW', failReason: 'Escrow tugagach xaridorga jo\'natib bo\'lmadi: ' + err.message },
+          }),
+          prisma.user.update({
+            where: { id: tx.buyerId },
+            data: { balance: { increment: tx.price } },
+          }),
+        ]).catch((e) => console.error(`[market] Tx #${tx.id} refund xatosi:`, e.message));
       }
     }
   }, 15 * 60 * 1000);

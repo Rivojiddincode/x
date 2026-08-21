@@ -76,16 +76,24 @@ router.get('/bot-stock', async (req, res) => {
 });
 
 router.post('/bot-stock/:id/resell', async (req, res) => {
+  const listingId = Number(req.params.id);
   const { price } = req.body;
   const parsedPrice = Math.round(Number(price));
   if (!price || parsedPrice < 6500) {
     return res.status(400).json({ success: false, message: 'Narx kamida 6 500 UZS bo\'lishi kerak' });
   }
-  const listing = await prisma.skinListing.update({
-    where: { id: Number(req.params.id) },
+
+  // Atomic lock: faqat status hali ham 'BOT_STOCK' bo'lsa ACTIVE'ga o'tkazamiz
+  const result = await prisma.skinListing.updateMany({
+    where: { id: listingId, status: 'BOT_STOCK' },
     data: { status: 'ACTIVE', price: parsedPrice },
-  }).catch(() => null);
-  if (!listing) return res.status(404).json({ success: false, message: 'Item topilmadi' });
+  });
+
+  if (result.count === 0) {
+    return res.status(409).json({ success: false, message: 'Item topilmadi yoki allaqachon sotuvga qo\'yilgan' });
+  }
+
+  const listing = await prisma.skinListing.findUnique({ where: { id: listingId } });
   res.json({ success: true, listing });
 });
 

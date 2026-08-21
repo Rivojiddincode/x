@@ -133,6 +133,7 @@ export default function App() {
           .then(data => {
             if (data.success && data.user) {
               setUser(data.user);
+              localStorage.setItem('starscs_user', JSON.stringify(data.user));
             }
           })
           .catch(err => console.log('Could not fetch user from DB:', err));
