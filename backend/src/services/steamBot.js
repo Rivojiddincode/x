@@ -51,6 +51,28 @@ client.on('loggedOn', () => {
   client.setPersona(SteamUser.EPersonaState.Online);
 });
 
+// MUHIM: agar bu hodisa ishga tushsa — demak BOT_SHARED_SECRET yo'q yoki NOTO'G'RI
+// (masalan eski, bekor qilingan authenticator'dan qolgan). Handler qo'shilmasa,
+// steam-user konsoldan qo'lda kod kiritishni "jim" kutib, Render'da ABADIY osilib
+// qoladi — hech qanday xato chiqmaydi, faqat "Steam Guard App Code:" deb yozadi.
+client.on('steamGuard', (domain, callback, lastCodeWrong) => {
+  if (lastCodeWrong) {
+    console.error(
+      '[steamBot] ❌ BOT_SHARED_SECRET NOTO\'G\'RI — Steam oxirgi kodni rad etdi. ' +
+      'Ehtimol bu authenticator qayta o\'rnatilgan va Render\'dagi BOT_SHARED_SECRET ' +
+      'yangilanmagan. Yangi maFile\'dan shared_secret\'ni tekshirib, Render Environment\'da yangilang.'
+    );
+  } else {
+    console.error(
+      '[steamBot] ❌ Steam Guard kod so\'ralmoqda, lekin BOT_SHARED_SECRET orqali avtomatik ' +
+      'generatsiya qilinmadi (ehtimol .env\'da yo\'q yoki noto\'g\'ri formatda). Bot bu yerda ' +
+      'abadiy kutib qolmasligi uchun ulanish bekor qilinadi — .env\'ni tekshiring va qayta deploy qiling.'
+    );
+  }
+  // callback()ni chaqirmaymiz — cheksiz noto'g'ri urinishlar/Steam bloklashining oldini olish uchun.
+  // Muammo .env'da tuzatilgandan keyin, servis qayta ishga tushirilganda logOn() qaytadan chaqiriladi.
+});
+
 client.on('webSession', (sessionID, cookies) => {
   manager.setCookies(cookies, (err) => {
     if (err) {
