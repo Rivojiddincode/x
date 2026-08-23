@@ -91,12 +91,9 @@ router.get('/market-price', async (req, res) => {
 // 2c. Berilgan item uchun float qiymati va paint seed
 // ---------------------------------------------------------
 router.get('/float', async (req, res) => {
-  const { inspectLink, assetId } = req.query;
-  if (!inspectLink || !assetId) {
-    return res.status(400).json({ success: false, message: 'inspectLink va assetId talab qilinadi' });
-  }
+  const { inspectLink, assetId, marketHashName } = req.query;
   try {
-    const data = await fetchFloatData(inspectLink, assetId);
+    const data = await fetchFloatData(inspectLink, assetId, marketHashName);
     if (!data) {
       return res.json({ success: true, data: null, message: 'Float ma\'lumoti topilmadi' });
     }

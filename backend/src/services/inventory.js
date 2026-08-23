@@ -97,72 +97,109 @@ export function buildInspectLink(itemOrActions, steamId64, assetId) {
     .replaceAll('%assetid%', assetId);
 }
 
+export function getWearFromMarketHashName(marketHashName) {
+  if (!marketHashName) return null;
+  const match = marketHashName.match(/\((Factory New|Minimal Wear|Field-Tested|Well-Worn|Battle-Scarred)\)/i);
+  if (!match) return null;
+  const rawName = match[1];
+  const ranges = {
+    'Factory New': { min: 0.00, max: 0.07, code: 'FN' },
+    'Minimal Wear': { min: 0.07, max: 0.15, code: 'MW' },
+    'Field-Tested': { min: 0.15, max: 0.38, code: 'FT' },
+    'Well-Worn': { min: 0.38, max: 0.45, code: 'WW' },
+    'Battle-Scarred': { min: 0.45, max: 1.00, code: 'BS' },
+  };
+  const key = Object.keys(ranges).find((k) => k.toLowerCase() === rawName.toLowerCase());
+  if (!key) return null;
+  const range = ranges[key];
+  return {
+    wearName: key,
+    wearCode: range.code,
+    min: range.min,
+    max: range.max,
+    isEstimated: true,
+  };
+}
+
 /**
  * Ochiq CSGOFloat inspect API orqali float qiymati va paint seed'ni oladi.
  * 2026-yildan boshlab CS2 inspect linklar o'z ichida (self-encoded) float/paint seed
  * ma'lumotini to'g'ridan-to'g'ri saqlaydi — shuning uchun avval MAHALLIY dekodlashga
  * urinamiz (tashqi so'rov kerak emas, tezroq va ishonchli). Faqat link "eski" (pointer)
- * formatda bo'lsa, tashqi API'ga murojaat qilamiz.
+ * formatda bo'lsa, tashqi API'ga murojaat qilamiz, omadsiz bo'lsa item nomidan kiyim
+ * toifasini (Field-Tested va h.k.) zaxira sifatida qaytaramiz.
  */
-export async function fetchFloatData(inspectLink, assetId) {
-  if (!inspectLink) return null;
+export async function fetchFloatData(inspectLink, assetId, marketHashName) {
+  const cacheKey = assetId || inspectLink || marketHashName;
+  if (!cacheKey) return null;
 
-  const cached = floatCache.get(assetId);
+  const cached = floatCache.get(cacheKey);
   if (cached) {
-    const ttl = cached.data ? FLOAT_CACHE_TTL_MS : 10 * 1000; // Muvaffaqiyatli bo'lsa 30 daqiqa, omadsiz bo'lsa faqat 10 soniya
+    const ttl = cached.data ? FLOAT_CACHE_TTL_MS : 10 * 1000;
     if (Date.now() - cached.fetchedAt < ttl) {
       return cached.data;
     }
   }
 
   // 1-urinish: mahalliy dekodlash (tashqi so'rovsiz, 100% tezkor va ishonchli)
-  try {
-    const decoded = decodeLink(inspectLink);
-    if (decoded && typeof decoded.paintwear === 'number') {
-      const result = {
-        floatValue: decoded.paintwear,
-        paintSeed: decoded.paintseed,
-        paintIndex: decoded.paintindex,
-      };
-      floatCache.set(assetId, { data: result, fetchedAt: Date.now() });
-      return result;
+  if (inspectLink) {
+    try {
+      const decoded = decodeLink(inspectLink);
+      if (decoded && typeof decoded.paintwear === 'number') {
+        const result = {
+          floatValue: decoded.paintwear,
+          paintSeed: decoded.paintseed,
+          paintIndex: decoded.paintindex,
+          isEstimated: false,
+        };
+        floatCache.set(cacheKey, { data: result, fetchedAt: Date.now() });
+        return result;
+      }
+    } catch (e) {
+      // Link pointer formatida — pastdagi fallback'larga o'tamiz
     }
-  } catch (e) {
-    // Link "eski" (self-encode qilinmagan, faqat pointer) formatda — pastdagi fallback'ga o'tamiz
   }
 
-  // 2-urinish (zaxira): tashqi API — faqat eski uslubdagi linklar uchun kerak bo'ladi
-  try {
-    const url = `https://api.csgofloat.com/?url=${encodeURIComponent(inspectLink)}`;
-    const res = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'application/json',
-      },
-    });
-    if (!res.ok) {
-      floatCache.set(assetId, { data: null, fetchedAt: Date.now() });
-      return null;
+  // 2-urinish (zaxira): tashqi API
+  if (inspectLink) {
+    try {
+      const url = `https://api.csgofloat.com/?url=${encodeURIComponent(inspectLink)}`;
+      const res = await fetch(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'application/json',
+        },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const info = data.iteminfo;
+        if (info && typeof info.floatvalue === 'number') {
+          const result = {
+            floatValue: info.floatvalue,
+            paintSeed: info.paintseed,
+            wearName: info.wear_name,
+            min: info.min,
+            max: info.max,
+            isEstimated: false,
+          };
+          floatCache.set(cacheKey, { data: result, fetchedAt: Date.now() });
+          return result;
+        }
+      }
+    } catch (e) {
+      // API rad etdi — pastdagi marketHashName fallback'iga o'tamiz
     }
-    const data = await res.json();
-    const info = data.iteminfo;
-    if (!info) {
-      floatCache.set(assetId, { data: null, fetchedAt: Date.now() });
-      return null;
-    }
-    const result = {
-      floatValue: info.floatvalue,
-      paintSeed: info.paintseed,
-      wearName: info.wear_name,
-      min: info.min,
-      max: info.max,
-    };
-    floatCache.set(assetId, { data: result, fetchedAt: Date.now() });
-    return result;
-  } catch (e) {
-    floatCache.set(assetId, { data: null, fetchedAt: Date.now() });
-    return null;
   }
+
+  // 3-urinish (zaxira): marketHashName dan kiyim toifasi va float diapazonini aniqlash
+  const fallback = getWearFromMarketHashName(marketHashName);
+  if (fallback) {
+    floatCache.set(cacheKey, { data: fallback, fetchedAt: Date.now() });
+    return fallback;
+  }
+
+  floatCache.set(cacheKey, { data: null, fetchedAt: Date.now() });
+  return null;
 }
 
 export function parseTradeUrl(tradeUrl) {

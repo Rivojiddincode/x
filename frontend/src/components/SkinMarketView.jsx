@@ -102,17 +102,13 @@ export function SkinMarketView({ user, onToast }) {
       .catch(() => {})
       .finally(() => setLoadingPrice(false));
 
-    if (item.inspectLink) {
-      fetch(`${API_BASE}/market/float?inspectLink=${encodeURIComponent(item.inspectLink)}&assetId=${item.assetId}`)
-        .then((r) => r.json())
-        .then((data) => {
-          if (data.success && data.data) setFloatData(data.data);
-        })
-        .catch(() => {})
-        .finally(() => setLoadingFloat(false));
-    } else {
-      setLoadingFloat(false);
-    }
+    fetch(`${API_BASE}/market/float?inspectLink=${encodeURIComponent(item.inspectLink || '')}&assetId=${item.assetId || ''}&marketHashName=${encodeURIComponent(item.marketHashName || '')}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.success && data.data) setFloatData(data.data);
+      })
+      .catch(() => {})
+      .finally(() => setLoadingFloat(false));
   };
 
   const instantSell = async () => {
@@ -739,9 +735,8 @@ function SkinDetailModal({ listing, onClose, onBuy, buyingId }) {
   const [loadingFloat, setLoadingFloat] = useState(false);
 
   React.useEffect(() => {
-    if (!listing.inspectLink) return;
     setLoadingFloat(true);
-    fetch(`${API_BASE}/market/float?inspectLink=${encodeURIComponent(listing.inspectLink)}&assetId=${listing.assetId}`)
+    fetch(`${API_BASE}/market/float?inspectLink=${encodeURIComponent(listing.inspectLink || '')}&assetId=${listing.assetId || ''}&marketHashName=${encodeURIComponent(listing.marketHashName || '')}`)
       .then((r) => r.json())
       .then((d) => { if (d.success && d.data) setFloatData(d.data); })
       .catch(() => {})
@@ -769,19 +764,29 @@ function SkinDetailModal({ listing, onClose, onBuy, buyingId }) {
             <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>Yuklanmoqda...</p>
           ) : floatData ? (
             <>
-              <FloatBar value={floatData.floatValue} />
+              <FloatBar value={typeof floatData.floatValue === 'number' ? floatData.floatValue : ((floatData.min ?? 0) + (floatData.max ?? 1)) / 2} />
               <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px', fontSize: '12.5px' }}>
-                <span style={{ color: 'var(--text-muted)' }}>
-                  Float: <b style={{ color: '#fff', fontFamily: 'monospace' }}>{floatData.floatValue?.toFixed(6)}</b>
-                </span>
-                <span style={{ color: 'var(--text-muted)' }}>
-                  Paint Seed: <b style={{ color: '#fff' }}>{floatData.paintSeed}</b>
-                </span>
+                {typeof floatData.floatValue === 'number' ? (
+                  <>
+                    <span style={{ color: 'var(--text-muted)' }}>
+                      Float: <b style={{ color: '#fff', fontFamily: 'monospace' }}>{floatData.floatValue.toFixed(6)}</b>
+                    </span>
+                    {floatData.paintSeed != null && (
+                      <span style={{ color: 'var(--text-muted)' }}>
+                        Paint Seed: <b style={{ color: '#fff' }}>{floatData.paintSeed}</b>
+                      </span>
+                    )}
+                  </>
+                ) : (
+                  <span style={{ color: 'var(--text-muted)' }}>
+                    Kiyim toifasi: <b style={{ color: '#fff' }}>{floatData.wearName} {floatData.wearCode ? `(${floatData.wearCode})` : ''}</b> ({floatData.min} - {floatData.max})
+                  </span>
+                )}
               </div>
             </>
           ) : (
             <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
-              Bu item uchun float ma'lumoti mavjud emas.
+              Bu item uchun float ma'lumoti mavjud emas (Keys/Stiker/Konteynerlar).
             </p>
           )}
         </div>
@@ -910,16 +915,29 @@ function SellTab({
               <span style={{ color: 'var(--text-muted)' }}>Float qiymati tekshirilmoqda...</span>
             ) : floatData ? (
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                <span style={{
-                  background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.35)',
-                  padding: '3px 10px', borderRadius: '6px', color: 'var(--span)', fontFamily: 'monospace', fontWeight: '700',
-                }}>
-                  Float: {floatData.floatValue?.toFixed(6)}
-                </span>
-                <span style={{ color: 'var(--text-muted)' }}>
-                  Paint Seed: <b style={{ color: '#fff' }}>{floatData.paintSeed}</b>
-                </span>
-                {floatData.wearName && <span style={{ color: 'var(--text-muted)' }}>({floatData.wearName})</span>}
+                {typeof floatData.floatValue === 'number' ? (
+                  <>
+                    <span style={{
+                      background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.35)',
+                      padding: '3px 10px', borderRadius: '6px', color: 'var(--span)', fontFamily: 'monospace', fontWeight: '700',
+                    }}>
+                      Float: {floatData.floatValue.toFixed(6)}
+                    </span>
+                    {floatData.paintSeed != null && (
+                      <span style={{ color: 'var(--text-muted)' }}>
+                        Paint Seed: <b style={{ color: '#fff' }}>{floatData.paintSeed}</b>
+                      </span>
+                    )}
+                    {floatData.wearName && <span style={{ color: 'var(--text-muted)' }}>({floatData.wearName})</span>}
+                  </>
+                ) : (
+                  <span style={{
+                    background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.35)',
+                    padding: '3px 10px', borderRadius: '6px', color: 'var(--span)', fontWeight: '600',
+                  }}>
+                    Kiyim holati: <b style={{ color: '#fff' }}>{floatData.wearName} {floatData.wearCode ? `(${floatData.wearCode})` : ''}</b> [{floatData.min} - {floatData.max}]
+                  </span>
+                )}
               </span>
             ) : (
               <span style={{ color: 'var(--text-muted)' }}>Float ma'lumoti topilmadi (Keys/Stiker/Konteynerlar uchun float bo'lmaydi).</span>
