@@ -862,7 +862,7 @@ function SellTab({
             placeholder="https://steamcommunity.com/tradeoffer/new/?partner=...&token=..."
             style={{ flex: 1, minWidth: '260px', padding: '10px 12px', borderRadius: '8px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--card-border)', color: '#fff', fontSize: '13px' }}
           />
-          <button className="btn btn-wallet" onClick={onSaveTradeUrl} disabled={savingTradeUrl}>
+          <button className="btn btn-wallet" onClick={saveTradeUrl} disabled={savingTradeUrl}>
             {savingTradeUrl ? 'Saqlanmoqda...' : 'Saqlash'}
           </button>
         </div>
@@ -872,7 +872,7 @@ function SellTab({
       <div className="card" style={{ marginBottom: '20px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
           <h3 className="card-title" style={{ fontSize: '15px' }}>Inventaringiz</h3>
-          <button className="btn btn-steam" onClick={onLoadInventory} disabled={loadingInventory}>
+          <button className="btn btn-steam" onClick={loadInventory} disabled={loadingInventory}>
             <RefreshCw size={14} /> {loadingInventory ? 'Yuklanmoqda...' : 'Inventarni yuklash'}
           </button>
         </div>
@@ -895,7 +895,7 @@ function SellTab({
                   borderColor: selectedItem?.assetId === item.assetId ? 'var(--money)' : 'var(--card-border)',
                   padding: '12px',
                 }}
-                onClick={() => item.tradable && onSelectItem(item)}
+                onClick={() => item.tradable && selectItem(item)}
               >
                 <div style={{ height: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.25)', borderRadius: '8px', marginBottom: '8px' }}>
                   {item.iconUrl ? <img src={item.iconUrl} alt={item.marketHashName} style={{ maxHeight: '90%', maxWidth: '90%' }} /> : <Tag size={24} color="var(--text-muted)" />}
@@ -998,7 +998,7 @@ function SellTab({
               placeholder="Narx (UZS), min 6 500"
               style={{ flex: 1, minWidth: '160px', padding: '10px 12px', borderRadius: '8px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--card-border)', color: '#fff', fontSize: '13px' }}
             />
-            <button className="btn btn-wallet" onClick={onCreateListing} disabled={creatingListing}>
+            <button className="btn btn-wallet" onClick={createListing} disabled={creatingListing}>
               {creatingListing ? 'Joylanmoqda...' : 'Sotuvga qo\'yish'}
             </button>
           </div>
@@ -1011,7 +1011,7 @@ function SellTab({
               <button
                 className="btn btn-steam"
                 style={{ width: '100%', justifyContent: 'center', borderColor: 'rgba(74,222,128,0.4)', color: 'var(--green)' }}
-                onClick={onInstantSell}
+                onClick={instantSell}
                 disabled={instantSelling}
               >
                 <Zap size={15} /> {instantSelling
