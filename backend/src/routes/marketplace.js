@@ -109,7 +109,7 @@ router.get('/float', async (req, res) => {
 router.post('/listings', requireAuth, checkNotBanned, sensitiveActionLimiter, async (req, res) => {
   const sellerSteamId = req.user.steamId;
   // price — foydalanuvchi UZS da kiritadi (frontend Steam narxini UZS da ko'rsatadi)
-  const { assetId, classId, instanceId, marketHashName, iconUrl, price, weaponType, inspectLink } = req.body;
+  const { assetId, classId, instanceId, marketHashName, iconUrl, price, weaponType, inspectLink, floatValue, paintSeed } = req.body;
 
   if (!assetId || !price) {
     return res.status(400).json({ success: false, message: 'Majburiy maydonlar to\'ldirilmagan' });
@@ -138,6 +138,9 @@ router.post('/listings', requireAuth, checkNotBanned, sensitiveActionLimiter, as
     });
   }
 
+  const parsedFloat = floatValue != null && floatValue !== '' ? parseFloat(floatValue) : null;
+  const parsedSeed = paintSeed != null && paintSeed !== '' ? parseInt(paintSeed) : null;
+
   const listing = await prisma.skinListing.create({
     data: {
       sellerId: seller.id,
@@ -147,6 +150,8 @@ router.post('/listings', requireAuth, checkNotBanned, sensitiveActionLimiter, as
       marketHashName,
       weaponType,
       inspectLink,
+      floatValue: parsedFloat && !isNaN(parsedFloat) ? parsedFloat : null,
+      paintSeed: parsedSeed && !isNaN(parsedSeed) ? parsedSeed : null,
       iconUrl,
       price: Math.round(Number(price)), // UZS da saqlanadi
       status: 'ACTIVE',

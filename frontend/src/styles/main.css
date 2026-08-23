@@ -1410,29 +1410,31 @@ nav.desktop-only   { display: flex; }
 }
 
 /* Float bar (lis-skins uslubidagi gradient slider) */
-.float-bar-wrap { width: 100%; }
+.float-bar-wrap { width: 100%; margin-top: 4px; }
 .float-bar-track {
   position: relative;
   display: flex;
   height: 8px;
-  border-radius: 4px;
+  border-radius: 999px;
   overflow: visible;
+  background: #0f172a;
 }
 .float-bar-track > div:not(.float-bar-marker) {
   height: 100%;
 }
-.float-bar-track > div:first-child { border-radius: 4px 0 0 4px; }
-.float-bar-track > div:nth-last-child(2) { border-radius: 0 4px 4px 0; }
+.float-bar-track > div:first-child { border-top-left-radius: 999px; border-bottom-left-radius: 999px; }
+.float-bar-track > div:nth-last-child(2) { border-top-right-radius: 999px; border-bottom-right-radius: 999px; }
 
 .float-bar-marker {
   position: absolute;
   top: -4px;
   width: 3px;
   height: 16px;
-  background: #fff;
+  background: #ffffff;
   border-radius: 2px;
-  box-shadow: 0 0 6px rgba(255, 255, 255, 0.8);
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.9), 0 0 2px rgba(0, 0, 0, 0.5);
   transform: translateX(-50%);
+  z-index: 2;
 }
 
 .float-bar-labels {
@@ -1442,4 +1444,5 @@ nav.desktop-only   { display: flex; }
   font-size: 10px;
   color: var(--text-muted);
   font-weight: 700;
+  letter-spacing: 0.5px;
 }

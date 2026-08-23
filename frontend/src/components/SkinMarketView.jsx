@@ -86,6 +86,7 @@ export function SkinMarketView({ user, onToast }) {
   const selectItem = async (item) => {
     setSelectedItem(item);
     setListPrice('');
+    setFloatInput('');
     setSuggestedPrice(null);
     setFloatData(null);
     setLoadingPrice(true);
@@ -105,7 +106,12 @@ export function SkinMarketView({ user, onToast }) {
     fetch(`${API_BASE}/market/float?inspectLink=${encodeURIComponent(item.inspectLink || '')}&assetId=${item.assetId || ''}&marketHashName=${encodeURIComponent(item.marketHashName || '')}`)
       .then((r) => r.json())
       .then((data) => {
-        if (data.success && data.data) setFloatData(data.data);
+        if (data.success && data.data) {
+          setFloatData(data.data);
+          if (typeof data.data.floatValue === 'number') {
+            setFloatInput(String(data.data.floatValue));
+          }
+        }
       })
       .catch(() => {})
       .finally(() => setLoadingFloat(false));
@@ -131,6 +137,7 @@ export function SkinMarketView({ user, onToast }) {
         onToast?.(data.message);
         setSelectedItem(null);
         setListPrice('');
+        setFloatInput('');
         setInventory((prev) => prev.filter((i) => i.assetId !== selectedItem.assetId));
         if (data.transactionId) pollTransactionStatus(data.transactionId);
       } else {
@@ -162,12 +169,15 @@ export function SkinMarketView({ user, onToast }) {
           inspectLink: selectedItem.inspectLink,
           iconUrl: selectedItem.iconUrl,
           price,
+          floatValue: floatInput ? parseFloat(floatInput) : (floatData?.floatValue ?? null),
+          paintSeed: floatData?.paintSeed ?? null,
         }),
       });
       if (data.success) {
         onToast?.('Item sotuvga qo\'yildi!');
         setSelectedItem(null);
         setListPrice('');
+        setFloatInput('');
         setInventory((prev) => prev.filter((i) => i.assetId !== selectedItem.assetId));
         fetchListings();
       } else {
@@ -910,38 +920,59 @@ function SellTab({
         <div className="card">
           <h3 className="card-title" style={{ fontSize: '15px' }}>Sotuvga qo'yish: {selectedItem.marketHashName}</h3>
 
-          <div style={{ margin: '8px 0', fontSize: '12px' }}>
-            {loadingFloat ? (
-              <span style={{ color: 'var(--text-muted)' }}>Float qiymati tekshirilmoqda...</span>
-            ) : floatData ? (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                {typeof floatData.floatValue === 'number' ? (
-                  <>
-                    <span style={{
-                      background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.35)',
-                      padding: '3px 10px', borderRadius: '6px', color: 'var(--span)', fontFamily: 'monospace', fontWeight: '700',
-                    }}>
-                      Float: {floatData.floatValue.toFixed(6)}
-                    </span>
-                    {floatData.paintSeed != null && (
-                      <span style={{ color: 'var(--text-muted)' }}>
-                        Paint Seed: <b style={{ color: '#fff' }}>{floatData.paintSeed}</b>
-                      </span>
-                    )}
-                    {floatData.wearName && <span style={{ color: 'var(--text-muted)' }}>({floatData.wearName})</span>}
-                  </>
-                ) : (
-                  <span style={{
-                    background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.35)',
-                    padding: '3px 10px', borderRadius: '6px', color: 'var(--span)', fontWeight: '600',
-                  }}>
-                    Kiyim holati: <b style={{ color: '#fff' }}>{floatData.wearName} {floatData.wearCode ? `(${floatData.wearCode})` : ''}</b> [{floatData.min} - {floatData.max}]
-                  </span>
-                )}
+          {/* Float Card Section */}
+          <div style={{ margin: '14px 0 10px', background: 'rgba(15, 23, 42, 0.6)', padding: '12px 14px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.08)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+              <span style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.8px', color: '#94a3b8' }}>
+                FLOAT QIYMATI
               </span>
-            ) : (
-              <span style={{ color: 'var(--text-muted)' }}>Float ma'lumoti topilmadi (Keys/Stiker/Konteynerlar uchun float bo'lmaydi).</span>
-            )}
+              {loadingFloat ? (
+                <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Aniqlanmoqda...</span>
+              ) : floatInput && !isNaN(parseFloat(floatInput)) ? (
+                <span style={{ fontSize: '12px', fontFamily: 'monospace', fontWeight: '700', color: '#38bdf8' }}>
+                  Float: {parseFloat(floatInput).toFixed(6)}
+                </span>
+              ) : null}
+            </div>
+
+            {/* Live Float Bar matching the user's design */}
+            <FloatBar
+              value={
+                floatInput && !isNaN(parseFloat(floatInput))
+                  ? parseFloat(floatInput)
+                  : (typeof floatData?.floatValue === 'number'
+                      ? floatData.floatValue
+                      : (floatData?.min != null ? (floatData.min + floatData.max) / 2 : null))
+              }
+            />
+
+            <div style={{ marginTop: '12px', display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <input
+                type="number"
+                step="0.000001"
+                min="0"
+                max="1"
+                placeholder="Float kiriting (masalan: 0.184521)"
+                value={floatInput}
+                onChange={(e) => setFloatInput(e.target.value)}
+                style={{
+                  flex: 1,
+                  padding: '8px 12px',
+                  borderRadius: '8px',
+                  background: 'rgba(0,0,0,0.4)',
+                  border: '1px solid rgba(255,255,255,0.15)',
+                  color: '#fff',
+                  fontSize: '13px',
+                  fontFamily: 'monospace',
+                  fontWeight: '600',
+                }}
+              />
+            </div>
+            <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px', display: 'block' }}>
+              {floatData?.floatValue != null
+                ? "Avto-aniqlangan float qiymati to'ldirildi. Xohlasangiz o'zgartirishingiz mumkin."
+                : "Float avtomatik aniqlansa joylanadi, aks holda CS2 yoki Steam'dan ko'rib o'zingiz kiriting."}
+            </span>
           </div>
 
           <div style={{ margin: '10px 0 4px', fontSize: '12px', color: 'var(--text-muted)' }}>
