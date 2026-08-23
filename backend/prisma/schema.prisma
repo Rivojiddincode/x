@@ -75,6 +75,7 @@ model SkinListing {
   instanceId     String
   marketHashName String
   weaponType     String?  // Steam'ning o'z type maydoni: "Covert Rifle", "Extraordinary Knife" va h.k. — rarity filtri uchun
+  inspectLink    String?  // Steam'ning "self-encoded" inspect linki — float/paint seed'ni istalgan vaqt mahalliy dekodlash uchun
   iconUrl        String
   price          Int      // in UZS (butun so'm)
   status         String   @default("ACTIVE") // ACTIVE | PENDING | SOLD | CANCELLED | BOT_STOCK (instant-sell orqali botga o'tgan)

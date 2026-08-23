@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link2, Tag, ShoppingCart, RefreshCw, CheckCircle2, AlertCircle, Lock, Zap, Search, Sword, Crosshair, Target, Wind, ShieldAlert, Heart, Hand, ChevronDown } from 'lucide-react';
+import { Link2, Tag, ShoppingCart, RefreshCw, CheckCircle2, AlertCircle, Lock, Zap, Search, Sword, Crosshair, Target, Wind, ShieldAlert, Heart, Hand, ChevronDown, Eye, X } from 'lucide-react';
 import { API_BASE, authFetch } from '../api/client';
 import { requestNotificationPermission, notifyBackground } from '../utils/notifications';
 
@@ -127,6 +127,7 @@ export function SkinMarketView({ user, onToast }) {
           instanceId: selectedItem.instanceId,
           marketHashName: selectedItem.marketHashName,
           weaponType: selectedItem.type,
+          inspectLink: selectedItem.inspectLink,
           iconUrl: selectedItem.iconUrl,
         }),
       });
@@ -162,6 +163,7 @@ export function SkinMarketView({ user, onToast }) {
           instanceId: selectedItem.instanceId,
           marketHashName: selectedItem.marketHashName,
           weaponType: selectedItem.type,
+          inspectLink: selectedItem.inspectLink,
           iconUrl: selectedItem.iconUrl,
           price,
         }),
@@ -440,6 +442,7 @@ function ShopTab({ user, listings, loading, onBuy, buyingId, onCancel, cancellin
   const [favorites, setFavorites] = useState(() => {
     try { return JSON.parse(localStorage.getItem('starscs_favorites') || '[]'); } catch { return []; }
   });
+  const [detailListing, setDetailListing] = useState(null); // "Batafsil ko'rish" modalida ochilgan item
 
   const toggleFavorite = (id) => {
     setFavorites((prev) => {
@@ -654,12 +657,13 @@ function ShopTab({ user, listings, loading, onBuy, buyingId, onCancel, cancellin
                         <Heart size={15} fill={isFav ? 'var(--red)' : 'none'} color={isFav ? 'var(--red)' : 'currentColor'} />
                       </button>
                     </div>
-                    <div className="skin-card-thumb">
+                    <div className="skin-card-thumb" onClick={() => setDetailListing(listing)} style={{ cursor: 'pointer' }}>
                       {listing.iconUrl ? (
                         <img src={listing.iconUrl} alt={listing.marketHashName} />
                       ) : (
                         <Tag size={32} color="var(--text-muted)" />
                       )}
+                      <div className="skin-card-thumb-hint"><Eye size={13} /> Batafsil</div>
                     </div>
                     <h3 className="skin-card-name" title={listing.marketHashName}>{listing.marketHashName}</h3>
                     <p className="skin-card-seller">
@@ -694,6 +698,109 @@ function ShopTab({ user, listings, loading, onBuy, buyingId, onCancel, cancellin
               })}
             </div>
           )}
+        </div>
+      </div>
+
+      {detailListing && (
+        <SkinDetailModal listing={detailListing} onClose={() => setDetailListing(null)} onBuy={onBuy} buyingId={buyingId} />
+      )}
+    </div>
+  );
+}
+
+// Real CS2 wear diapazonlari — float bar segmentlarini shu nisbatlarda chizamiz
+const WEAR_RANGES = [
+  { code: 'FN', from: 0, to: 0.07, color: '#4ade80', label: 'Factory New' },
+  { code: 'MW', from: 0.07, to: 0.15, color: '#a3e635', label: 'Minimal Wear' },
+  { code: 'FT', from: 0.15, to: 0.38, color: '#facc15', label: 'Field-Tested' },
+  { code: 'WW', from: 0.38, to: 0.45, color: '#fb923c', label: 'Well-Worn' },
+  { code: 'BS', from: 0.45, to: 1.00, color: '#f87171', label: 'Battle-Scarred' },
+];
+
+function FloatBar({ value }) {
+  const pct = Math.max(0, Math.min(1, value)) * 100;
+  return (
+    <div className="float-bar-wrap">
+      <div className="float-bar-track">
+        {WEAR_RANGES.map((r) => (
+          <div key={r.code} style={{ width: `${(r.to - r.from) * 100}%`, background: r.color }} />
+        ))}
+        <div className="float-bar-marker" style={{ left: `${pct}%` }} />
+      </div>
+      <div className="float-bar-labels">
+        {WEAR_RANGES.map((r) => <span key={r.code}>{r.code}</span>)}
+      </div>
+    </div>
+  );
+}
+
+function SkinDetailModal({ listing, onClose, onBuy, buyingId }) {
+  const [floatData, setFloatData] = useState(null);
+  const [loadingFloat, setLoadingFloat] = useState(false);
+
+  React.useEffect(() => {
+    if (!listing.inspectLink) return;
+    setLoadingFloat(true);
+    fetch(`${API_BASE}/market/float?inspectLink=${encodeURIComponent(listing.inspectLink)}&assetId=${listing.assetId}`)
+      .then((r) => r.json())
+      .then((d) => { if (d.success && d.data) setFloatData(d.data); })
+      .catch(() => {})
+      .finally(() => setLoadingFloat(false));
+  }, [listing.id]);
+
+  const tier = getRarityTier(listing.weaponType);
+  const accentColor = tier?.color || getRarityAccent(listing.marketHashName).color;
+
+  return (
+    <div className="skin-modal-overlay" onClick={onClose}>
+      <div className="skin-modal" onClick={(e) => e.stopPropagation()} style={{ '--rarity-color': accentColor }}>
+        <button className="skin-modal-close" onClick={onClose}><X size={18} /></button>
+
+        <div className="skin-modal-image">
+          {listing.iconUrl ? <img src={listing.iconUrl} alt={listing.marketHashName} /> : <Tag size={48} color="var(--text-muted)" />}
+        </div>
+
+        <h2 className="skin-modal-title">{listing.marketHashName}</h2>
+        <p className="skin-modal-seller">Sotuvchi: {listing.seller?.displayName || 'Noma\'lum'}</p>
+
+        <div className="skin-modal-section">
+          <h4 className="shop-filter-title">Float qiymati</h4>
+          {loadingFloat ? (
+            <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>Yuklanmoqda...</p>
+          ) : floatData ? (
+            <>
+              <FloatBar value={floatData.floatValue} />
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px', fontSize: '12.5px' }}>
+                <span style={{ color: 'var(--text-muted)' }}>
+                  Float: <b style={{ color: '#fff', fontFamily: 'monospace' }}>{floatData.floatValue?.toFixed(6)}</b>
+                </span>
+                <span style={{ color: 'var(--text-muted)' }}>
+                  Paint Seed: <b style={{ color: '#fff' }}>{floatData.paintSeed}</b>
+                </span>
+              </div>
+            </>
+          ) : (
+            <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
+              Bu item uchun float ma'lumoti mavjud emas.
+            </p>
+          )}
+        </div>
+
+        {listing.inspectLink && (
+          <a href={listing.inspectLink} className="btn btn-steam skin-modal-inspect">
+            <Eye size={15} /> O'yinda ko'rish (Inspect in Game)
+          </a>
+        )}
+
+        <div className="skin-modal-footer">
+          <span className="skin-card-price" style={{ fontSize: '24px' }}>{Number(listing.price).toLocaleString()} UZS</span>
+          <button
+            className="btn btn-wallet"
+            disabled={buyingId === listing.id}
+            onClick={() => { onBuy(listing); onClose(); }}
+          >
+            {buyingId === listing.id ? '...' : 'Sotib olish'}
+          </button>
         </div>
       </div>
     </div>

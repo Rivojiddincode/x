@@ -1305,3 +1305,141 @@ nav.desktop-only   { display: flex; }
   .grid { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
   .nav-btn { padding: 7px 10px; font-size: 12px; gap: 5px; }
 }
+
+/* Skin Market — Batafsil ko'rish modali */
+.skin-card-thumb { position: relative; }
+.skin-card-thumb-hint {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 8px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.skin-card-thumb:hover .skin-card-thumb-hint { opacity: 1; }
+
+.skin-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 300;
+  padding: 20px;
+}
+
+.skin-modal {
+  position: relative;
+  background: var(--card-bg);
+  border: 1px solid color-mix(in srgb, var(--rarity-color) 40%, var(--card-border));
+  border-radius: var(--radius);
+  padding: 28px;
+  max-width: 420px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 30px 80px -20px rgba(0, 0, 0, 0.7);
+}
+
+.skin-modal-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  border: none;
+  border-radius: 8px;
+  color: var(--text-muted);
+  padding: 6px;
+  cursor: pointer;
+}
+.skin-modal-close:hover { color: #fff; }
+
+.skin-modal-image {
+  height: 220px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(ellipse at center, color-mix(in srgb, var(--rarity-color) 12%, transparent), transparent 70%);
+  border-radius: 12px;
+  margin-bottom: 16px;
+}
+.skin-modal-image img {
+  max-width: 90%;
+  max-height: 90%;
+  filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.5));
+}
+
+.skin-modal-title {
+  font-family: var(--font-heading);
+  font-size: 19px;
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+.skin-modal-seller {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  margin-bottom: 18px;
+}
+
+.skin-modal-section {
+  border-top: 1px solid var(--card-border);
+  padding-top: 16px;
+  margin-bottom: 16px;
+}
+
+.skin-modal-inspect {
+  width: 100%;
+  justify-content: center;
+  margin-bottom: 18px;
+}
+
+.skin-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid var(--card-border);
+  padding-top: 18px;
+}
+
+/* Float bar (lis-skins uslubidagi gradient slider) */
+.float-bar-wrap { width: 100%; }
+.float-bar-track {
+  position: relative;
+  display: flex;
+  height: 8px;
+  border-radius: 4px;
+  overflow: visible;
+}
+.float-bar-track > div:not(.float-bar-marker) {
+  height: 100%;
+}
+.float-bar-track > div:first-child { border-radius: 4px 0 0 4px; }
+.float-bar-track > div:nth-last-child(2) { border-radius: 0 4px 4px 0; }
+
+.float-bar-marker {
+  position: absolute;
+  top: -4px;
+  width: 3px;
+  height: 16px;
+  background: #fff;
+  border-radius: 2px;
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.8);
+  transform: translateX(-50%);
+}
+
+.float-bar-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-size: 10px;
+  color: var(--text-muted);
+  font-weight: 700;
+}
