@@ -922,7 +922,7 @@ function SellTab({
                 {floatData.wearName && <span style={{ color: 'var(--text-muted)' }}>({floatData.wearName})</span>}
               </span>
             ) : (
-              <span style={{ color: 'var(--text-muted)' }}>Float ma'lumoti topilmadi (statTrak/knife bo'lmagan itemlar uchun odatiy holat).</span>
+              <span style={{ color: 'var(--text-muted)' }}>Float ma'lumoti topilmadi (Keys/Stiker/Konteynerlar uchun float bo'lmaydi).</span>
             )}
           </div>
 

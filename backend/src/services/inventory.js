@@ -57,7 +57,7 @@ export async function fetchInventory(steamId64) {
                 .map((d) => d.value)
                 .find((v) => typeof v === 'string' && /trad(e|able)/i.test(v)) || 'Trade cooldown\'da'
             : null),
-        inspectLink: buildInspectLink(item.actions, steamId64, item.assetid || item.id),
+        inspectLink: buildInspectLink(item, steamId64, item.assetid || item.id),
       }));
 
       // Endi hech narsani filtrlamaymiz — cooldown'dagi (tradable=false) itemlar ham
@@ -76,13 +76,25 @@ const FLOAT_CACHE_TTL_MS = 30 * 60 * 1000;
  * ichida %owner_steamid% va %assetid% o'rniga qo'yiladigan shablon sifatida.
  * Buni haqiqiy qiymatlar bilan to'ldirib, ochiq CSGOFloat API'ga yuboramiz.
  */
-export function buildInspectLink(rawActions, steamId64, assetId) {
-  if (!rawActions || !rawActions.length) return null;
-  const inspectAction = rawActions.find((a) => a.link && a.link.includes('csgo_econ_action_preview'));
+export function buildInspectLink(itemOrActions, steamId64, assetId) {
+  let actions = [];
+  if (Array.isArray(itemOrActions)) {
+    actions = itemOrActions;
+  } else if (itemOrActions && typeof itemOrActions === 'object') {
+    if (itemOrActions.inspect_link) {
+      return itemOrActions.inspect_link
+        .replaceAll('%owner_steamid%', steamId64)
+        .replaceAll('%assetid%', assetId);
+    }
+    actions = itemOrActions.actions || itemOrActions.market_actions || [];
+  }
+
+  if (!actions || !actions.length) return null;
+  const inspectAction = actions.find((a) => a && a.link && a.link.includes('csgo_econ_action_preview'));
   if (!inspectAction) return null;
   return inspectAction.link
-    .replace('%owner_steamid%', steamId64)
-    .replace('%assetid%', assetId);
+    .replaceAll('%owner_steamid%', steamId64)
+    .replaceAll('%assetid%', assetId);
 }
 
 /**
@@ -90,18 +102,20 @@ export function buildInspectLink(rawActions, steamId64, assetId) {
  * 2026-yildan boshlab CS2 inspect linklar o'z ichida (self-encoded) float/paint seed
  * ma'lumotini to'g'ridan-to'g'ri saqlaydi — shuning uchun avval MAHALLIY dekodlashga
  * urinamiz (tashqi so'rov kerak emas, tezroq va ishonchli). Faqat link "eski" (pointer)
- * formatda bo'lsa, tashqi API'ga murojaat qilamiz — lekin 2026-yilda Steam Game
- * Coordinator'dagi uzilishlar tufayli bu variant ishlamasligi mumkin.
+ * formatda bo'lsa, tashqi API'ga murojaat qilamiz.
  */
 export async function fetchFloatData(inspectLink, assetId) {
   if (!inspectLink) return null;
 
   const cached = floatCache.get(assetId);
-  if (cached && Date.now() - cached.fetchedAt < FLOAT_CACHE_TTL_MS) {
-    return cached.data;
+  if (cached) {
+    const ttl = cached.data ? FLOAT_CACHE_TTL_MS : 10 * 1000; // Muvaffaqiyatli bo'lsa 30 daqiqa, omadsiz bo'lsa faqat 10 soniya
+    if (Date.now() - cached.fetchedAt < ttl) {
+      return cached.data;
+    }
   }
 
-  // 1-urinish: mahalliy dekodlash (tashqi so'rovsiz, tezkor)
+  // 1-urinish: mahalliy dekodlash (tashqi so'rovsiz, 100% tezkor va ishonchli)
   try {
     const decoded = decodeLink(inspectLink);
     if (decoded && typeof decoded.paintwear === 'number') {
@@ -120,7 +134,12 @@ export async function fetchFloatData(inspectLink, assetId) {
   // 2-urinish (zaxira): tashqi API — faqat eski uslubdagi linklar uchun kerak bo'ladi
   try {
     const url = `https://api.csgofloat.com/?url=${encodeURIComponent(inspectLink)}`;
-    const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (StarsCS Float Fetcher)' } });
+    const res = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'application/json',
+      },
+    });
     if (!res.ok) {
       floatCache.set(assetId, { data: null, fetchedAt: Date.now() });
       return null;
