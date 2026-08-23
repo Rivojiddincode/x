@@ -17,6 +17,7 @@ export function SkinMarketView({ user, onToast }) {
   const [loadingPrice, setLoadingPrice] = useState(false);
   const [floatData, setFloatData] = useState(null);
   const [loadingFloat, setLoadingFloat] = useState(false);
+  const [floatInput, setFloatInput] = useState('');
   const [instantSelling, setInstantSelling] = useState(false);
 
   const [listings, setListings] = useState([]);
@@ -314,21 +315,23 @@ export function SkinMarketView({ user, onToast }) {
           tradeUrl={tradeUrl}
           setTradeUrl={setTradeUrl}
           savingTradeUrl={savingTradeUrl}
-          onSaveTradeUrl={saveTradeUrl}
+          saveTradeUrl={saveTradeUrl}
           inventory={inventory}
           loadingInventory={loadingInventory}
-          onLoadInventory={loadInventory}
+          loadInventory={loadInventory}
           selectedItem={selectedItem}
-          onSelectItem={selectItem}
+          selectItem={selectItem}
           listPrice={listPrice}
           setListPrice={setListPrice}
           suggestedPrice={suggestedPrice}
           loadingPrice={loadingPrice}
           floatData={floatData}
           loadingFloat={loadingFloat}
-          onCreateListing={createListing}
+          floatInput={floatInput}
+          setFloatInput={setFloatInput}
+          createListing={createListing}
           creatingListing={creatingListing}
-          onInstantSell={instantSell}
+          instantSell={instantSell}
           instantSelling={instantSelling}
         />
       )}
@@ -823,13 +826,14 @@ function SkinDetailModal({ listing, onClose, onBuy, buyingId }) {
 }
 
 function SellTab({
-  user, tradeUrl, setTradeUrl, savingTradeUrl, onSaveTradeUrl,
-  inventory, loadingInventory, onLoadInventory,
-  selectedItem, onSelectItem, listPrice, setListPrice,
+  user, tradeUrl, setTradeUrl, savingTradeUrl, saveTradeUrl,
+  inventory, loadingInventory, loadInventory,
+  selectedItem, selectItem, listPrice, setListPrice,
   suggestedPrice, loadingPrice,
   floatData, loadingFloat,
-  onCreateListing, creatingListing,
-  onInstantSell, instantSelling,
+  floatInput, setFloatInput,
+  createListing, creatingListing,
+  instantSell, instantSelling,
 }) {
   if (!user) {
     return (
