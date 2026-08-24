@@ -348,7 +348,7 @@ const WEAPON_IMAGES = {
   'AK-47':    '/ak47.png',
   'M4A4':     '/m4a4.png',
   'M4A1-S':   '/m4a1-s.png',
-  'SG 553':   'https://community.cloudflare.steamstatic.com/economy/image/class/730/310777300/200fx125f',
+  'SG 553':   '/sg553.png',
   'AUG':      'https://community.cloudflare.steamstatic.com/economy/image/class/730/310777162/200fx125f',
   'FAMAS':    'https://community.cloudflare.steamstatic.com/economy/image/class/730/310777276/200fx125f',
   'Galil AR': 'https://community.cloudflare.steamstatic.com/economy/image/class/730/310777279/200fx125f',
@@ -603,7 +603,7 @@ function ShopTab({ user, listings, loading, onBuy, buyingId, onCancel, cancellin
                       onClick={() => { setCategory(key); setWeaponFilter(w); setExpandedCategory(null); }}
                     >
                       {WEAPON_IMAGES[w] ? (
-                        <span className={`category-dropdown-img-wrap ${w === 'AK-47' || w === 'M4A4' || w === 'M4A1-S' ? 'ak47-glow' : ''}`}>
+                        <span className={`category-dropdown-img-wrap ${['AK-47', 'M4A4', 'M4A1-S', 'SG 553'].includes(w) ? 'ak47-glow' : ''}`}>
                           <img
                             src={WEAPON_IMAGES[w]}
                             alt={w}
