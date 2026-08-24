@@ -666,14 +666,41 @@ function ShopTab({ user, listings, loading, onBuy, buyingId, onCancel, cancellin
                         <Heart size={15} fill={isFav ? 'var(--red)' : 'none'} color={isFav ? 'var(--red)' : 'currentColor'} />
                       </button>
                     </div>
-                    <div className="skin-card-thumb" onClick={() => setDetailListing(listing)} style={{ cursor: 'pointer' }}>
-                      {listing.iconUrl ? (
-                        <img src={listing.iconUrl} alt={listing.marketHashName} />
+
+                    {/* Rasm + hover overlay */}
+                    <div className="skin-card-thumb-wrap">
+                      <div className="skin-card-thumb" onClick={() => setDetailListing(listing)} style={{ cursor: 'pointer' }}>
+                        {listing.iconUrl ? (
+                          <img src={listing.iconUrl} alt={listing.marketHashName} />
+                        ) : (
+                          <Tag size={32} color="var(--text-muted)" />
+                        )}
+                      </div>
+                      {/* Hover da chiqadigan "Sotib olish" overlay */}
+                      {user && (listing.sellerId === user.id || listing.seller?.steamId === user.steamId) ? (
+                        <div className="skin-card-hover-overlay">
+                          <button
+                            className="skin-card-buy-btn skin-card-cancel-btn"
+                            disabled={cancellingId === listing.id}
+                            onClick={() => onCancel(listing.id)}
+                          >
+                            {cancellingId === listing.id ? '...' : 'Sotuvdan olish'}
+                          </button>
+                        </div>
                       ) : (
-                        <Tag size={32} color="var(--text-muted)" />
+                        <div className="skin-card-hover-overlay">
+                          <button
+                            className="skin-card-buy-btn"
+                            disabled={buyingId === listing.id}
+                            onClick={() => onBuy(listing)}
+                          >
+                            <ShoppingCart size={14} />
+                            {buyingId === listing.id ? '...' : 'Sotib olish'}
+                          </button>
+                        </div>
                       )}
-                      <div className="skin-card-thumb-hint"><Eye size={13} /> Batafsil</div>
                     </div>
+
                     <h3 className="skin-card-name" title={listing.marketHashName}>{listing.marketHashName}</h3>
                     <p className="skin-card-seller">
                       Sotuvchi: {listing.seller?.displayName || 'Noma\'lum'}
@@ -683,24 +710,6 @@ function ShopTab({ user, listings, loading, onBuy, buyingId, onCancel, cancellin
                         <span className="skin-card-price">{Number(listing.price).toLocaleString()} UZS</span>
                         {qty > 1 && <span className="skin-card-qty">x{qty}</span>}
                       </span>
-                      {user && (listing.sellerId === user.id || listing.seller?.steamId === user.steamId) ? (
-                        <button
-                          className="btn btn-steam"
-                          style={{ borderColor: 'var(--red)', color: 'var(--red)', fontSize: '12px' }}
-                          disabled={cancellingId === listing.id}
-                          onClick={() => onCancel(listing.id)}
-                        >
-                          {cancellingId === listing.id ? '...' : 'Sotuvdan olish'}
-                        </button>
-                      ) : (
-                        <button
-                          className="btn btn-wallet"
-                          disabled={buyingId === listing.id}
-                          onClick={() => onBuy(listing)}
-                        >
-                          {buyingId === listing.id ? '...' : 'Sotib olish'}
-                        </button>
-                      )}
                     </div>
                   </div>
                 );

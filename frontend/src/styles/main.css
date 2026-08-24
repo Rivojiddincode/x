@@ -844,17 +844,83 @@ nav.desktop-only   { display: flex; }
   justify-content: center;
   background: rgba(0, 0, 0, 0.25);
   border-radius: 8px;
-  margin-bottom: 12px;
   padding: 8px;
 }
 .skin-card-thumb img {
   max-height: 90%;
   max-width: 90%;
   filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.4));
-  transition: transform 0.2s ease;
+  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
+/* Rasm hover qilinganda kichrayadi */
 .skin-card:hover .skin-card-thumb img {
-  transform: scale(1.06);
+  transform: scale(0.82);
+}
+
+/* Thumb wrapper — rasm + overlay birga */
+.skin-card-thumb-wrap {
+  position: relative;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+/* Hover overlay — "Sotib olish" tugmasi */
+.skin-card-hover-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 10px;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  pointer-events: none;
+}
+.skin-card:hover .skin-card-hover-overlay {
+  opacity: 1;
+  pointer-events: all;
+}
+
+/* Buy tugmasi */
+.skin-card-buy-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 14px;
+  border-radius: 8px;
+  border: none;
+  background: rgba(255, 255, 255, 0.95);
+  color: #0b0d14;
+  font-family: var(--font-heading);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transform: translateY(8px);
+  transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.35);
+  letter-spacing: 0.01em;
+}
+.skin-card:hover .skin-card-buy-btn {
+  transform: translateY(0);
+}
+.skin-card-buy-btn:hover {
+  background: #fff;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.5);
+}
+.skin-card-buy-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+/* Sotuvdan olish tugmasi */
+.skin-card-cancel-btn {
+  background: rgba(248, 113, 113, 0.92);
+  color: #fff;
+}
+.skin-card-cancel-btn:hover {
+  background: #f87171;
 }
 
 .skin-card-name {
@@ -887,8 +953,9 @@ nav.desktop-only   { display: flex; }
 .skin-card-price {
   font-size: 19px;
   font-weight: 800;
-  color: var(--money);
+  color: #ffffff;
   font-family: var(--font-heading);
+  letter-spacing: -0.02em;
 }
 
 @media (max-width: 640px) {
@@ -1294,7 +1361,7 @@ nav.desktop-only   { display: flex; }
 
   .skin-card-thumb { height: 88px; }
   .skin-card-name  { font-size: 12px; }
-  .skin-card-price { font-size: 15px; }
+  .skin-card-price { font-size: 15px; color: #ffffff; }
 }
 
 /* ================================================
