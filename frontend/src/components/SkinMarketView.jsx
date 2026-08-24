@@ -486,9 +486,15 @@ function ShopTab({ user, listings, loading, onBuy, buyingId, onCancel, cancellin
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState('newest');
   const [category, setCategory] = useState('all');
-  const [weaponFilter, setWeaponFilter] = useState(null); // masalan "AWP" — kategoriya ichida aniq qurol
+  const [weaponFilters, setWeaponFilters] = useState([]); // masalan ["AK-47", "M4A4"] — ko'p qurol tanlash
   const [expandedCategory, setExpandedCategory] = useState(null); // qaysi tab dropdown ochiq
   const dropdownTimeoutRef = React.useRef(null);
+
+  const toggleWeaponFilter = (w) => {
+    setWeaponFilters((prev) =>
+      prev.includes(w) ? prev.filter((item) => item !== w) : [...prev, w]
+    );
+  };
 
   const handleMouseEnterCategory = (key) => {
     if (dropdownTimeoutRef.current) clearTimeout(dropdownTimeoutRef.current);
@@ -543,8 +549,12 @@ function ShopTab({ user, listings, loading, onBuy, buyingId, onCancel, cancellin
     if (category !== 'all') {
       result = result.filter((l) => getWeaponCategory(l.marketHashName) === category);
     }
-    if (weaponFilter) {
-      result = result.filter((l) => l.marketHashName.split('|')[0].trim().toLowerCase() === weaponFilter.toLowerCase());
+    if (weaponFilters.length > 0) {
+      const lowerFilters = weaponFilters.map((w) => w.toLowerCase());
+      result = result.filter((l) => {
+        const name = l.marketHashName.split('|')[0].trim().toLowerCase();
+        return lowerFilters.includes(name);
+      });
     }
     if (search.trim()) {
       const q = search.trim().toLowerCase();
@@ -572,14 +582,14 @@ function ShopTab({ user, listings, loading, onBuy, buyingId, onCancel, cancellin
       default: sorted.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     }
     return sorted;
-  }, [listings, search, sortBy, category, weaponFilter, priceFrom, priceTo, rarityFilter, favoritesOnly, favorites]);
+  }, [listings, search, sortBy, category, weaponFilters, priceFrom, priceTo, rarityFilter, favoritesOnly, favorites]);
 
   return (
     <div>
       <div className="category-tabs">
         <button
           className={`category-tab ${category === 'all' ? 'active' : ''}`}
-          onClick={() => { setCategory('all'); setWeaponFilter(null); setExpandedCategory(null); }}
+          onClick={() => { setCategory('all'); setWeaponFilters([]); setExpandedCategory(null); }}
         >
           Barchasi
         </button>
@@ -588,6 +598,7 @@ function ShopTab({ user, listings, loading, onBuy, buyingId, onCancel, cancellin
           const count = categoryCounts[key] || 0;
           if (count === 0) return null;
           const isExpanded = expandedCategory === key;
+          const isAllSelected = weaponFilters.length === 0;
           return (
             <div
               key={key}
@@ -597,7 +608,7 @@ function ShopTab({ user, listings, loading, onBuy, buyingId, onCancel, cancellin
             >
               <button
                 className={`category-tab ${category === key ? 'active' : ''}`}
-                onClick={() => { setCategory(key); setWeaponFilter(null); }}
+                onClick={() => { setCategory(key); setWeaponFilters([]); }}
               >
                 {cat.customIcon ? (
                   <img src={cat.customIcon} alt={cat.label} className="category-tab-custom-icon" />
@@ -613,21 +624,21 @@ function ShopTab({ user, listings, loading, onBuy, buyingId, onCancel, cancellin
               {isExpanded && (
                 <div className="category-dropdown">
                   <div
-                    className={`category-dropdown-item dropdown-select-all ${!weaponFilter ? 'active' : ''}`}
-                    onClick={() => { setCategory(key); setWeaponFilter(null); }}
+                    className={`category-dropdown-item dropdown-select-all ${isAllSelected ? 'active' : ''}`}
+                    onClick={() => { setCategory(key); setWeaponFilters([]); }}
                   >
                     <span className="category-dropdown-name">Select all</span>
-                    <span className={`dropdown-checkbox ${!weaponFilter ? 'checked' : ''}`}>
-                      {!weaponFilter && <Check size={11} strokeWidth={3} />}
+                    <span className={`dropdown-checkbox ${isAllSelected ? 'checked' : ''}`}>
+                      {isAllSelected && <Check size={11} strokeWidth={3} />}
                     </span>
                   </div>
                   {cat.weapons.map((w) => {
-                    const isSelected = weaponFilter === w;
+                    const isSelected = weaponFilters.includes(w);
                     return (
                       <div
                         key={w}
                         className={`category-dropdown-item ${isSelected ? 'active' : ''}`}
-                        onClick={() => { setCategory(key); setWeaponFilter(w); }}
+                        onClick={() => { setCategory(key); toggleWeaponFilter(w); }}
                       >
                         {WEAPON_IMAGES[w] ? (
                           <span className={`category-dropdown-img-wrap ${WEAPON_IMAGES[w]?.startsWith('/') ? 'ak47-glow' : ''}`}>
