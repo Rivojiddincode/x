@@ -1294,13 +1294,31 @@ nav.desktop-only   { display: flex; }
 }
 
 /* Dropdown da real qurol rasmlari */
+.category-dropdown-img-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 4px;
+}
+
 .category-dropdown-weapon-img {
   width: 44px;
   height: 28px;
   object-fit: contain;
-  flex-shrink: 0;
-  filter: drop-shadow(0 1px 3px rgba(0,0,0,0.4));
+  display: block;
   image-rendering: auto;
+  position: relative;
+  z-index: 1;
+}
+
+/* AK-47 uchun qizil radial nur */
+.category-dropdown-img-wrap.ak47-glow {
+  background: radial-gradient(ellipse at center, rgba(220, 30, 30, 0.55) 0%, rgba(180, 0, 0, 0.2) 50%, transparent 75%);
+}
+.category-dropdown-img-wrap.ak47-glow .category-dropdown-weapon-img {
+  filter: drop-shadow(0 0 6px rgba(255, 50, 50, 0.8)) drop-shadow(0 0 12px rgba(200, 0, 0, 0.5));
 }
 
 /* Qimmat itemlar uchun porlaydigan (premium) fon */
