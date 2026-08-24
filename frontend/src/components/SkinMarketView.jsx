@@ -657,28 +657,46 @@ function ShopTab({ user, listings, loading, onBuy, buyingId, onCancel, cancellin
                     className={`skin-card ${isHighValue ? 'skin-card-premium' : ''}`}
                     style={{ '--rarity-color': accentColor }}
                   >
-                    <div className="skin-card-bar" />
-                    <div className="skin-card-topbar">
-                      {wear ? (
-                        <span className="skin-card-wear" style={{ color: wear.color, borderColor: wear.color }}>{wear.code}</span>
-                      ) : <span />}
-                      <button className="skin-card-fav" onClick={() => toggleFavorite(listing.id)}>
-                        <Heart size={15} fill={isFav ? 'var(--red)' : 'none'} color={isFav ? 'var(--red)' : 'currentColor'} />
-                      </button>
+                    {/* Rasm — to'liq card kengligida, ustida wear + yurak */}
+                    <div className="skin-card-img-area" onClick={() => setDetailListing(listing)}>
+                      {listing.iconUrl ? (
+                        <img
+                          className="skin-card-img"
+                          src={listing.iconUrl}
+                          alt={listing.marketHashName}
+                        />
+                      ) : (
+                        <div className="skin-card-img-placeholder">
+                          <Tag size={40} color="var(--text-muted)" />
+                        </div>
+                      )}
+                      {/* Wear badge + Yurak — rasm ustida */}
+                      <div className="skin-card-badges">
+                        {wear ? (
+                          <span className="skin-card-wear" style={{ color: wear.color, borderColor: wear.color }}>{wear.code}</span>
+                        ) : <span />}
+                        <button
+                          className="skin-card-fav"
+                          onClick={(e) => { e.stopPropagation(); toggleFavorite(listing.id); }}
+                        >
+                          <Heart size={15} fill={isFav ? 'var(--red)' : 'none'} color={isFav ? 'var(--red)' : 'currentColor'} />
+                        </button>
+                      </div>
                     </div>
 
-                    {/* Rasm + hover overlay */}
-                    <div className="skin-card-thumb-wrap">
-                      <div className="skin-card-thumb" onClick={() => setDetailListing(listing)} style={{ cursor: 'pointer' }}>
-                        {listing.iconUrl ? (
-                          <img src={listing.iconUrl} alt={listing.marketHashName} />
-                        ) : (
-                          <Tag size={32} color="var(--text-muted)" />
-                        )}
-                      </div>
-                      {/* Hover da chiqadigan "Sotib olish" overlay */}
-                      {user && (listing.sellerId === user.id || listing.seller?.steamId === user.steamId) ? (
-                        <div className="skin-card-hover-overlay">
+                    {/* Pastki qism — nom, sotuvchi, narx, buy btn */}
+                    <div className="skin-card-body">
+                      <h3 className="skin-card-name" title={listing.marketHashName}>{listing.marketHashName}</h3>
+                      <p className="skin-card-seller">Sotuvchi: {listing.seller?.displayName || 'Noma\'lum'}</p>
+
+                      <div className="skin-card-footer">
+                        <span className="skin-card-price-wrap">
+                          <span className="skin-card-price">{Number(listing.price).toLocaleString()} UZS</span>
+                          {qty > 1 && <span className="skin-card-qty">x{qty}</span>}
+                        </span>
+
+                        {/* Hover da narxdan pastida chiqadi */}
+                        {user && (listing.sellerId === user.id || listing.seller?.steamId === user.steamId) ? (
                           <button
                             className="skin-card-buy-btn skin-card-cancel-btn"
                             disabled={cancellingId === listing.id}
@@ -686,9 +704,7 @@ function ShopTab({ user, listings, loading, onBuy, buyingId, onCancel, cancellin
                           >
                             {cancellingId === listing.id ? '...' : 'Sotuvdan olish'}
                           </button>
-                        </div>
-                      ) : (
-                        <div className="skin-card-hover-overlay">
+                        ) : (
                           <button
                             className="skin-card-buy-btn"
                             disabled={buyingId === listing.id}
@@ -697,19 +713,8 @@ function ShopTab({ user, listings, loading, onBuy, buyingId, onCancel, cancellin
                             <ShoppingCart size={14} />
                             {buyingId === listing.id ? '...' : 'Sotib olish'}
                           </button>
-                        </div>
-                      )}
-                    </div>
-
-                    <h3 className="skin-card-name" title={listing.marketHashName}>{listing.marketHashName}</h3>
-                    <p className="skin-card-seller">
-                      Sotuvchi: {listing.seller?.displayName || 'Noma\'lum'}
-                    </p>
-                    <div className="skin-card-footer">
-                      <span style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
-                        <span className="skin-card-price">{Number(listing.price).toLocaleString()} UZS</span>
-                        {qty > 1 && <span className="skin-card-qty">x{qty}</span>}
-                      </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 );
