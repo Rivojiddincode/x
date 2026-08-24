@@ -346,7 +346,7 @@ export function SkinMarketView({ user, onToast }) {
 const WEAPON_IMAGES = {
   // Rifles
   'AK-47':    '/ak47.png',
-  'M4A4':     'https://community.cloudflare.steamstatic.com/economy/image/class/730/310777278/200fx125f',
+  'M4A4':     '/m4a4.png',
   'M4A1-S':   'https://community.cloudflare.steamstatic.com/economy/image/class/730/310777163/200fx125f',
   'SG 553':   'https://community.cloudflare.steamstatic.com/economy/image/class/730/310777300/200fx125f',
   'AUG':      'https://community.cloudflare.steamstatic.com/economy/image/class/730/310777162/200fx125f',
@@ -603,7 +603,7 @@ function ShopTab({ user, listings, loading, onBuy, buyingId, onCancel, cancellin
                       onClick={() => { setCategory(key); setWeaponFilter(w); setExpandedCategory(null); }}
                     >
                       {WEAPON_IMAGES[w] ? (
-                        <span className={`category-dropdown-img-wrap ${w === 'AK-47' ? 'ak47-glow' : ''}`}>
+                        <span className={`category-dropdown-img-wrap ${w === 'AK-47' || w === 'M4A4' ? 'ak47-glow' : ''}`}>
                           <img
                             src={WEAPON_IMAGES[w]}
                             alt={w}
