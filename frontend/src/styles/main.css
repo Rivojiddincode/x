@@ -926,7 +926,7 @@ nav.desktop-only   { display: flex; }
 
 /* Pastki matn qismi */
 .skin-card-body {
-  padding: 10px 12px 12px;
+  padding: 10px 0 0;
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -949,6 +949,7 @@ nav.desktop-only   { display: flex; }
   white-space: nowrap;
   color: rgba(255,255,255,0.92);
   letter-spacing: 0.01em;
+  padding: 0 12px;
 }
 
 .skin-card-seller {
@@ -956,8 +957,9 @@ nav.desktop-only   { display: flex; }
   font-weight: 300;              /* Motiva Sans Light */
   font-family: var(--font-motiva);
   color: var(--text-muted);
-  margin-bottom: 8px;
+  margin-bottom: 6px;
   letter-spacing: 0.01em;
+  padding: 0 12px;
 }
 
 .skin-card-footer {
@@ -965,6 +967,7 @@ nav.desktop-only   { display: flex; }
   flex-direction: column;
   gap: 0;
   margin-top: auto;
+  padding: 0 12px 10px;
 }
 
 .skin-card-price-wrap {
@@ -990,13 +993,15 @@ nav.desktop-only   { display: flex; }
   gap: 6px;
   padding: 0 14px;
   margin-top: 0;
-  border-radius: 8px;
+  border-radius: 0;
   border: none;
-  background: rgba(255, 255, 255, 0.95);
-  color: #0b0d14;
-  font-family: var(--font-heading);
+  background: linear-gradient(90deg, #ff6a00 0%, #ee0979 100%);
+  color: #ffffff;
+  font-family: var(--font-motiva);
   font-size: 13px;
   font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   cursor: pointer;
   /* Yashirin holat */
   max-height: 0;
@@ -1009,36 +1014,37 @@ nav.desktop-only   { display: flex; }
     opacity 0.22s ease,
     transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1),
     margin-top 0.22s ease,
-    box-shadow 0.15s ease;
+    box-shadow 0.15s ease,
+    background 0.15s ease;
   box-shadow: none;
-  letter-spacing: 0.01em;
 }
 /* Hover da chiqadi */
 .skin-card:hover .skin-card-buy-btn {
   max-height: 48px;
-  padding-top: 9px;
-  padding-bottom: 9px;
+  padding-top: 10px;
+  padding-bottom: 10px;
   opacity: 1;
   transform: translateY(0);
-  margin-top: 8px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+  margin-top: 0;
+  box-shadow: 0 4px 20px rgba(238, 9, 121, 0.35);
 }
 .skin-card-buy-btn:hover {
-  background: #fff;
-  box-shadow: 0 6px 24px rgba(0,0,0,0.5);
+  background: linear-gradient(90deg, #ff8c00 0%, #ff1493 100%);
+  box-shadow: 0 6px 28px rgba(238, 9, 121, 0.5);
 }
 .skin-card-buy-btn:disabled {
-  opacity: 0.6;
+  opacity: 0.5;
   cursor: not-allowed;
 }
 /* Sotuvdan olish — qizil */
 .skin-card-cancel-btn {
-  background: rgba(248, 113, 113, 0.92);
+  background: linear-gradient(90deg, #ff4444 0%, #cc0000 100%);
   color: #fff;
 }
 .skin-card-cancel-btn:hover {
-  background: #f87171;
+  background: linear-gradient(90deg, #ff6666 0%, #ee0000 100%);
 }
+
 
 /* Qty badge */
 .skin-card-qty {
