@@ -967,13 +967,14 @@ nav.desktop-only   { display: flex; }
   flex-direction: column;
   gap: 0;
   margin-top: auto;
-  padding: 0 12px 10px;
+  padding: 0;
 }
 
 .skin-card-price-wrap {
   display: flex;
   align-items: baseline;
   gap: 6px;
+  padding: 0 12px 8px;
 }
 
 .skin-card-price {
