@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link2, Tag, ShoppingCart, RefreshCw, CheckCircle2, AlertCircle, Lock, Zap, Search, Sword, Crosshair, Target, Wind, ShieldAlert, Heart, Hand, ChevronDown, Eye, X } from 'lucide-react';
+import { Link2, Tag, ShoppingCart, RefreshCw, CheckCircle2, AlertCircle, Lock, Zap, Search, Sword, Crosshair, Target, Wind, ShieldAlert, Heart, Hand, ChevronDown, Eye, X, Check } from 'lucide-react';
 import { API_BASE, authFetch } from '../api/client';
 import { requestNotificationPermission, notifyBackground } from '../utils/notifications';
 
@@ -576,7 +576,12 @@ function ShopTab({ user, listings, loading, onBuy, buyingId, onCancel, cancellin
           if (count === 0) return null;
           const isExpanded = expandedCategory === key;
           return (
-            <div key={key} className="category-tab-wrap">
+            <div
+              key={key}
+              className="category-tab-wrap"
+              onMouseEnter={() => setExpandedCategory(key)}
+              onMouseLeave={() => setExpandedCategory(null)}
+            >
               <button
                 className={`category-tab ${category === key ? 'active' : ''}`}
                 onClick={() => { setCategory(key); setWeaponFilter(null); }}
@@ -585,38 +590,46 @@ function ShopTab({ user, listings, loading, onBuy, buyingId, onCancel, cancellin
                 <ChevronDown
                   size={13}
                   className={`category-chevron ${isExpanded ? 'open' : ''}`}
-                  onClick={(e) => { e.stopPropagation(); setExpandedCategory(isExpanded ? null : key); }}
                 />
               </button>
               {isExpanded && (
                 <div className="category-dropdown">
-                  <button
-                    className={`category-dropdown-item ${!weaponFilter ? 'active' : ''}`}
+                  <div
+                    className={`category-dropdown-item dropdown-select-all ${!weaponFilter ? 'active' : ''}`}
                     onClick={() => { setCategory(key); setWeaponFilter(null); setExpandedCategory(null); }}
                   >
-                    Barchasini ko'rsatish
-                  </button>
-                  {cat.weapons.map((w) => (
-                    <button
-                      key={w}
-                      className={`category-dropdown-item ${weaponFilter === w ? 'active' : ''}`}
-                      onClick={() => { setCategory(key); setWeaponFilter(w); setExpandedCategory(null); }}
-                    >
-                      {WEAPON_IMAGES[w] ? (
-                        <span className={`category-dropdown-img-wrap ${WEAPON_IMAGES[w]?.startsWith('/') ? 'ak47-glow' : ''}`}>
-                          <img
-                            src={WEAPON_IMAGES[w]}
-                            alt={w}
-                            className="category-dropdown-weapon-img"
-                            onError={(e) => { e.target.style.display = 'none'; }}
-                          />
+                    <span className="category-dropdown-name">Select all</span>
+                    <span className={`dropdown-checkbox ${!weaponFilter ? 'checked' : ''}`}>
+                      {!weaponFilter && <Check size={11} strokeWidth={3} />}
+                    </span>
+                  </div>
+                  {cat.weapons.map((w) => {
+                    const isSelected = weaponFilter === w;
+                    return (
+                      <div
+                        key={w}
+                        className={`category-dropdown-item ${isSelected ? 'active' : ''}`}
+                        onClick={() => { setCategory(key); setWeaponFilter(w); setExpandedCategory(null); }}
+                      >
+                        {WEAPON_IMAGES[w] ? (
+                          <span className={`category-dropdown-img-wrap ${WEAPON_IMAGES[w]?.startsWith('/') ? 'ak47-glow' : ''}`}>
+                            <img
+                              src={WEAPON_IMAGES[w]}
+                              alt={w}
+                              className="category-dropdown-weapon-img"
+                              onError={(e) => { e.target.style.display = 'none'; }}
+                            />
+                          </span>
+                        ) : (
+                          <Icon size={13} className="category-dropdown-icon" />
+                        )}
+                        <span className="category-dropdown-name">{w}</span>
+                        <span className={`dropdown-checkbox ${isSelected ? 'checked' : ''}`}>
+                          {isSelected && <Check size={11} strokeWidth={3} />}
                         </span>
-                      ) : (
-                        <Icon size={13} className="category-dropdown-icon" />
-                      )}
-                      {w}
-                    </button>
-                  ))}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
