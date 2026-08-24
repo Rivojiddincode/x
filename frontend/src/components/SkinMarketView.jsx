@@ -341,6 +341,50 @@ export function SkinMarketView({ user, onToast }) {
 
 // marketHashName formati odatda "QurolNomi | Skin Nomi (Wear)" — "|" dan oldingi
 // qism qurol nomi. Shunga qarab kategoriyaga ajratamiz.
+
+// Har bir qurol uchun Steam CDN rasmlar
+const WEAPON_IMAGES = {
+  // Rifles
+  'AK-47':    'https://community.cloudflare.steamstatic.com/economy/image/class/730/310777160/200fx125f',
+  'M4A4':     'https://community.cloudflare.steamstatic.com/economy/image/class/730/310777278/200fx125f',
+  'M4A1-S':   'https://community.cloudflare.steamstatic.com/economy/image/class/730/310777163/200fx125f',
+  'SG 553':   'https://community.cloudflare.steamstatic.com/economy/image/class/730/310777300/200fx125f',
+  'AUG':      'https://community.cloudflare.steamstatic.com/economy/image/class/730/310777162/200fx125f',
+  'FAMAS':    'https://community.cloudflare.steamstatic.com/economy/image/class/730/310777276/200fx125f',
+  'Galil AR': 'https://community.cloudflare.steamstatic.com/economy/image/class/730/310777279/200fx125f',
+  // Snipers
+  'AWP':      'https://community.cloudflare.steamstatic.com/economy/image/class/730/310777164/200fx125f',
+  'SSG 08':   'https://community.cloudflare.steamstatic.com/economy/image/class/730/310777302/200fx125f',
+  'SCAR-20':  'https://community.cloudflare.steamstatic.com/economy/image/class/730/310777299/200fx125f',
+  'G3SG1':    'https://community.cloudflare.steamstatic.com/economy/image/class/730/310777275/200fx125f',
+  // Pistols
+  'Glock-18':      'https://community.cloudflare.steamstatic.com/economy/image/class/730/310777277/200fx125f',
+  'USP-S':         'https://community.cloudflare.steamstatic.com/economy/image/class/730/310777165/200fx125f',
+  'P250':          'https://community.cloudflare.steamstatic.com/economy/image/class/730/310777293/200fx125f',
+  'Desert Eagle':  'https://community.cloudflare.steamstatic.com/economy/image/class/730/310777272/200fx125f',
+  'Five-SeveN':    'https://community.cloudflare.steamstatic.com/economy/image/class/730/310777274/200fx125f',
+  'Tec-9':         'https://community.cloudflare.steamstatic.com/economy/image/class/730/310777303/200fx125f',
+  'CZ75-Auto':     'https://community.cloudflare.steamstatic.com/economy/image/class/730/310777271/200fx125f',
+  'P2000':         'https://community.cloudflare.steamstatic.com/economy/image/class/730/310777292/200fx125f',
+  'R8 Revolver':   'https://community.cloudflare.steamstatic.com/economy/image/class/730/310777298/200fx125f',
+  'Dual Berettas': 'https://community.cloudflare.steamstatic.com/economy/image/class/730/310777273/200fx125f',
+  // SMGs
+  'MP9':      'https://community.cloudflare.steamstatic.com/economy/image/class/730/310777288/200fx125f',
+  'MAC-10':   'https://community.cloudflare.steamstatic.com/economy/image/class/730/310777282/200fx125f',
+  'MP7':      'https://community.cloudflare.steamstatic.com/economy/image/class/730/310777287/200fx125f',
+  'UMP-45':   'https://community.cloudflare.steamstatic.com/economy/image/class/730/310777305/200fx125f',
+  'P90':      'https://community.cloudflare.steamstatic.com/economy/image/class/730/310777294/200fx125f',
+  'PP-Bizon': 'https://community.cloudflare.steamstatic.com/economy/image/class/730/310777295/200fx125f',
+  'MP5-SD':   'https://community.cloudflare.steamstatic.com/economy/image/class/730/310777286/200fx125f',
+  // Heavy
+  'Nova':      'https://community.cloudflare.steamstatic.com/economy/image/class/730/310777290/200fx125f',
+  'XM1014':   'https://community.cloudflare.steamstatic.com/economy/image/class/730/310777307/200fx125f',
+  'Sawed-Off': 'https://community.cloudflare.steamstatic.com/economy/image/class/730/310777301/200fx125f',
+  'MAG-7':    'https://community.cloudflare.steamstatic.com/economy/image/class/730/310777283/200fx125f',
+  'M249':     'https://community.cloudflare.steamstatic.com/economy/image/class/730/310777281/200fx125f',
+  'Negev':    'https://community.cloudflare.steamstatic.com/economy/image/class/730/310777289/200fx125f',
+};
+
 const WEAPON_CATEGORIES = {
   knife: {
     label: 'Pichoq', icon: Sword,
@@ -558,7 +602,16 @@ function ShopTab({ user, listings, loading, onBuy, buyingId, onCancel, cancellin
                       className={`category-dropdown-item ${weaponFilter === w ? 'active' : ''}`}
                       onClick={() => { setCategory(key); setWeaponFilter(w); setExpandedCategory(null); }}
                     >
-                      <Icon size={13} className="category-dropdown-icon" />
+                      {WEAPON_IMAGES[w] ? (
+                        <img
+                          src={WEAPON_IMAGES[w]}
+                          alt={w}
+                          className="category-dropdown-weapon-img"
+                          onError={(e) => { e.target.style.display = 'none'; }}
+                        />
+                      ) : (
+                        <Icon size={13} className="category-dropdown-icon" />
+                      )}
                       {w}
                     </button>
                   ))}
