@@ -345,7 +345,7 @@ export function SkinMarketView({ user, onToast }) {
 // Har bir qurol uchun Steam CDN rasmlar
 const WEAPON_IMAGES = {
   // Rifles
-  'AK-47':    'https://community.cloudflare.steamstatic.com/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I1kV1Z6gJ4TKQAOY3PDXB_Vz3jNcUi7URxBWMoVlWpSL5qAkxqXFBLIImZaqJBIxgxnfOT5n0vbxIetKfICAkr6JlGt8hpqmdbCV9t2j2FbqrxVmIzz3doSIJQ/360fx360f',
+  'AK-47':    '/ak47.png',
   'M4A4':     'https://community.cloudflare.steamstatic.com/economy/image/class/730/310777278/200fx125f',
   'M4A1-S':   'https://community.cloudflare.steamstatic.com/economy/image/class/730/310777163/200fx125f',
   'SG 553':   'https://community.cloudflare.steamstatic.com/economy/image/class/730/310777300/200fx125f',

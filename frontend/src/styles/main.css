@@ -1315,10 +1315,19 @@ nav.desktop-only   { display: flex; }
 
 /* AK-47 uchun qizil radial nur */
 .category-dropdown-img-wrap.ak47-glow {
-  background: radial-gradient(ellipse at center, rgba(220, 30, 30, 0.55) 0%, rgba(180, 0, 0, 0.2) 50%, transparent 75%);
+  position: relative;
+  background: radial-gradient(ellipse at center, rgba(255, 35, 35, 0.7) 0%, rgba(200, 10, 10, 0.35) 55%, transparent 80%);
+  border-radius: 6px;
 }
+
 .category-dropdown-img-wrap.ak47-glow .category-dropdown-weapon-img {
-  filter: drop-shadow(0 0 6px rgba(255, 50, 50, 0.8)) drop-shadow(0 0 12px rgba(200, 0, 0, 0.5));
+  filter: drop-shadow(0 0 5px rgba(255, 40, 40, 0.9)) drop-shadow(0 0 10px rgba(220, 0, 0, 0.6));
+  transition: transform 0.2s ease, filter 0.2s ease;
+}
+
+.category-dropdown-item:hover .category-dropdown-img-wrap.ak47-glow .category-dropdown-weapon-img {
+  transform: scale(1.08);
+  filter: drop-shadow(0 0 8px rgba(255, 60, 60, 1)) drop-shadow(0 0 14px rgba(255, 0, 0, 0.8));
 }
 
 /* Qimmat itemlar uchun porlaydigan (premium) fon */
