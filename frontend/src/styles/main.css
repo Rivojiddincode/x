@@ -551,7 +551,7 @@ body {
 .filter-btn { background: var(--card-bg); border: 1px solid var(--card-border); color: var(--text-muted); padding: 8px 16px; border-radius: 8px; cursor: pointer; font-family: var(--font-heading); font-weight: 700; font-size: 12px; }
 .filter-btn.active { background: var(--span); color: #fff; border-color: var(--span); }
 
-.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 20px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; }
 .card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: var(--radius); padding: 24px; display: flex; flex-direction: column; justify-content: space-between; transition: all 0.25s ease; }
 .card:hover { transform: translateY(-4px); border-color: rgba(90, 128, 242, 0.4); box-shadow: 0 12px 30px rgba(0,0,0,0.5); }
 .card-title { font-family: var(--font-heading); font-size: 18px; font-weight: 700; }
@@ -837,7 +837,7 @@ nav.desktop-only   { display: flex; }
 .skin-card-img-area {
   position: relative;
   width: 100%;
-  aspect-ratio: 4/3;
+  aspect-ratio: 16/10;
   overflow: hidden;
   cursor: pointer;
   background: transparent;
