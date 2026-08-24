@@ -614,7 +614,7 @@ function ShopTab({ user, listings, loading, onBuy, buyingId, onCancel, cancellin
                 <div className="category-dropdown">
                   <div
                     className={`category-dropdown-item dropdown-select-all ${!weaponFilter ? 'active' : ''}`}
-                    onClick={() => { setCategory(key); setWeaponFilter(null); setExpandedCategory(null); }}
+                    onClick={() => { setCategory(key); setWeaponFilter(null); }}
                   >
                     <span className="category-dropdown-name">Select all</span>
                     <span className={`dropdown-checkbox ${!weaponFilter ? 'checked' : ''}`}>
@@ -627,7 +627,7 @@ function ShopTab({ user, listings, loading, onBuy, buyingId, onCancel, cancellin
                       <div
                         key={w}
                         className={`category-dropdown-item ${isSelected ? 'active' : ''}`}
-                        onClick={() => { setCategory(key); setWeaponFilter(w); setExpandedCategory(null); }}
+                        onClick={() => { setCategory(key); setWeaponFilter(w); }}
                       >
                         {WEAPON_IMAGES[w] ? (
                           <span className={`category-dropdown-img-wrap ${WEAPON_IMAGES[w]?.startsWith('/') ? 'ak47-glow' : ''}`}>
