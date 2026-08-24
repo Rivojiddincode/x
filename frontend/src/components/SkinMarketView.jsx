@@ -350,7 +350,7 @@ const WEAPON_IMAGES = {
   'M4A1-S':   '/m4a1-s.png',
   'SG 553':   '/sg553.png',
   'AUG':      '/aug.png',
-  'FAMAS':    'https://community.cloudflare.steamstatic.com/economy/image/class/730/310777276/200fx125f',
+  'FAMAS':    '/famas.png',
   'Galil AR': 'https://community.cloudflare.steamstatic.com/economy/image/class/730/310777279/200fx125f',
   // Snipers
   'AWP':      'https://community.cloudflare.steamstatic.com/economy/image/class/730/310777164/200fx125f',
