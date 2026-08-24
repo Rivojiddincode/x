@@ -402,7 +402,7 @@ const WEAPON_CATEGORIES = {
     match: (w) => ['awp', 'ssg 08', 'scar-20', 'g3sg1'].includes(w.toLowerCase()),
   },
   rifle: {
-    label: 'Avtomat', icon: Target,
+    label: 'Avtomat', icon: Target, customIcon: '/rifle-icon.png',
     weapons: ['AK-47', 'M4A4', 'M4A1-S', 'SG 553', 'AUG', 'FAMAS', 'Galil AR'],
     match: (w) => ['ak-47', 'm4a4', 'm4a1-s', 'sg 553', 'aug', 'famas', 'galil ar'].includes(w.toLowerCase()),
   },
@@ -488,6 +488,19 @@ function ShopTab({ user, listings, loading, onBuy, buyingId, onCancel, cancellin
   const [category, setCategory] = useState('all');
   const [weaponFilter, setWeaponFilter] = useState(null); // masalan "AWP" — kategoriya ichida aniq qurol
   const [expandedCategory, setExpandedCategory] = useState(null); // qaysi tab dropdown ochiq
+  const dropdownTimeoutRef = React.useRef(null);
+
+  const handleMouseEnterCategory = (key) => {
+    if (dropdownTimeoutRef.current) clearTimeout(dropdownTimeoutRef.current);
+    setExpandedCategory(key);
+  };
+
+  const handleMouseLeaveCategory = () => {
+    if (dropdownTimeoutRef.current) clearTimeout(dropdownTimeoutRef.current);
+    dropdownTimeoutRef.current = setTimeout(() => {
+      setExpandedCategory(null);
+    }, 220);
+  };
   const [priceFrom, setPriceFrom] = useState('');
   const [priceTo, setPriceTo] = useState('');
   const [rarityFilter, setRarityFilter] = useState([]); // tanlangan rarity key'lar ro'yxati
@@ -568,7 +581,7 @@ function ShopTab({ user, listings, loading, onBuy, buyingId, onCancel, cancellin
           className={`category-tab ${category === 'all' ? 'active' : ''}`}
           onClick={() => { setCategory('all'); setWeaponFilter(null); setExpandedCategory(null); }}
         >
-          Barchasi <span className="category-count">{categoryCounts.all || 0}</span>
+          Barchasi
         </button>
         {Object.entries(WEAPON_CATEGORIES).map(([key, cat]) => {
           const Icon = cat.icon;
@@ -579,14 +592,19 @@ function ShopTab({ user, listings, loading, onBuy, buyingId, onCancel, cancellin
             <div
               key={key}
               className="category-tab-wrap"
-              onMouseEnter={() => setExpandedCategory(key)}
-              onMouseLeave={() => setExpandedCategory(null)}
+              onMouseEnter={() => handleMouseEnterCategory(key)}
+              onMouseLeave={handleMouseLeaveCategory}
             >
               <button
                 className={`category-tab ${category === key ? 'active' : ''}`}
                 onClick={() => { setCategory(key); setWeaponFilter(null); }}
               >
-                <Icon size={13} /> {cat.label} <span className="category-count">{count}</span>
+                {cat.customIcon ? (
+                  <img src={cat.customIcon} alt={cat.label} className="category-tab-custom-icon" />
+                ) : (
+                  <Icon size={13} />
+                )}
+                {cat.label}
                 <ChevronDown
                   size={13}
                   className={`category-chevron ${isExpanded ? 'open' : ''}`}

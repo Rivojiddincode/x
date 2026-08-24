@@ -1248,6 +1248,18 @@ nav.desktop-only   { display: flex; }
   transform: rotate(180deg);
 }
 
+.category-tab-custom-icon {
+  width: 15px;
+  height: 15px;
+  object-fit: contain;
+  filter: brightness(0.85);
+  transition: filter 0.15s ease, transform 0.15s ease;
+}
+.category-tab:hover .category-tab-custom-icon,
+.category-tab.active .category-tab-custom-icon {
+  filter: brightness(1.2) drop-shadow(0 0 2px rgba(255, 255, 255, 0.4));
+}
+
 .category-dropdown {
   position: absolute;
   top: calc(100% + 4px);
@@ -1264,6 +1276,16 @@ nav.desktop-only   { display: flex; }
   display: flex;
   flex-direction: column;
   gap: 2px;
+}
+
+.category-dropdown::before {
+  content: "";
+  position: absolute;
+  top: -12px;
+  left: 0;
+  right: 0;
+  height: 12px;
+  background: transparent;
 }
 
 .category-dropdown::-webkit-scrollbar {
