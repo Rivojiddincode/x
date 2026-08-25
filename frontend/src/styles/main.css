@@ -1145,7 +1145,7 @@ nav.desktop-only   { display: flex; }
 /* Skin Market — sidebar layout (narx/rarity filtri) */
 .shop-layout {
   display: grid;
-  grid-template-columns: 220px 1fr;
+  grid-template-columns: 250px 1fr;
   gap: 20px;
   align-items: start;
 }
@@ -1176,7 +1176,7 @@ input[type="number"],
   gap: 16px;
   backdrop-filter: blur(12px);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
-  width: 250px;
+  width: 100%;
 }
 
 .shop-sidebar-header {
