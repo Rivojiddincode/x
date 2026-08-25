@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link2, Tag, ShoppingCart, RefreshCw, CheckCircle2, AlertCircle, Lock, Zap, Search, Sword, Crosshair, Target, Wind, ShieldAlert, Heart, Hand, ChevronDown, Eye, X, Check, Minus, Plus, RotateCcw } from 'lucide-react';
+import { Link2, Tag, ShoppingCart, RefreshCw, CheckCircle2, AlertCircle, Lock, Zap, Search, Sword, Crosshair, Target, Wind, ShieldAlert, Heart, Hand, ChevronDown, Eye, X, Check, Minus, Plus, RotateCcw, SlidersHorizontal } from 'lucide-react';
 import { API_BASE, authFetch } from '../api/client';
 import { requestNotificationPermission, notifyBackground } from '../utils/notifications';
 
@@ -816,22 +816,34 @@ function ShopTab({ user, listings, loading, onBuy, buyingId, onCancel, cancellin
         {/* O'ng qism — toolbar + grid */}
         <div className="shop-main">
           <div className="shop-toolbar">
+            <button
+              type="button"
+              className="shop-refresh-btn"
+              onClick={onRefresh}
+              title="Yangilash"
+            >
+              <RefreshCw size={16} />
+            </button>
+
             <div className="shop-search">
-              <Search size={15} className="shop-search-icon" />
+              <Search size={16} className="shop-search-icon" />
               <input
+                type="text"
                 placeholder="Skin nomi bo'yicha qidirish..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
-            <select className="shop-sort-select" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
-              {SORT_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
-            <button className="btn btn-steam" onClick={onRefresh}>
-              <RefreshCw size={14} /> Yangilash
-            </button>
+
+            <div className="shop-sort-wrap">
+              <SlidersHorizontal size={15} className="shop-sort-icon" />
+              <select className="shop-sort-select" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+                {SORT_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+              <ChevronDown size={14} className="shop-sort-chevron" />
+            </div>
           </div>
 
           <p style={{ color: 'var(--text-muted)', fontSize: '12px', margin: '10px 0 16px' }}>
