@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link2, Tag, ShoppingCart, RefreshCw, CheckCircle2, AlertCircle, Lock, Zap, Search, Sword, Crosshair, Target, Wind, ShieldAlert, Heart, Hand, ChevronDown, Eye, X, Check } from 'lucide-react';
+import { Link2, Tag, ShoppingCart, RefreshCw, CheckCircle2, AlertCircle, Lock, Zap, Search, Sword, Crosshair, Target, Wind, ShieldAlert, Heart, Hand, ChevronDown, Eye, X, Check, Minus, Plus, RotateCcw } from 'lucide-react';
 import { API_BASE, authFetch } from '../api/client';
 import { requestNotificationPermission, notifyBackground } from '../utils/notifications';
 
@@ -465,17 +465,25 @@ function getRarityAccent(name = '') {
   return { color: '#4b69ff', label: 'Restricted+' }; // Default blue-ish (Steam classified/restricted family)
 }
 
+const WEAR_TIERS = [
+  { code: 'FN', label: 'Factory New' },
+  { code: 'MW', label: 'Minimal Wear' },
+  { code: 'FT', label: 'Field-Tested' },
+  { code: 'WW', label: 'Well-Worn' },
+  { code: 'BS', label: 'Battle-Scarred' },
+];
+
 // Real Steam "type" matnidan (masalan "Covert Rifle", "Extraordinary Knife")
 // rarity darajasini chiqarib olamiz — Steam'ning o'z terminologiyasi shu.
 const RARITY_TIERS = [
-  { key: 'consumer', label: 'Standart', color: '#b0c3d9', match: (t) => /consumer/i.test(t) },
-  { key: 'industrial', label: 'Sanoat', color: '#5e98d9', match: (t) => /industrial/i.test(t) },
+  { key: 'extraordinary', label: 'Extraordinary', color: '#e4ae39', match: (t) => /extraordinary/i.test(t) },
+  { key: 'covert', label: 'Covert', color: '#eb4b4b', match: (t) => /covert/i.test(t) },
+  { key: 'contraband', label: 'Contraband', color: '#e4ae39', match: (t) => /contraband/i.test(t) },
+  { key: 'classified', label: 'Classified', color: '#d32ce6', match: (t) => /classified/i.test(t) },
+  { key: 'restricted', label: 'Restricted', color: '#8847ff', match: (t) => /restricted/i.test(t) },
   { key: 'milspec', label: 'Mil-Spec', color: '#4b69ff', match: (t) => /mil-spec/i.test(t) },
-  { key: 'restricted', label: 'Cheklangan', color: '#8847ff', match: (t) => /restricted/i.test(t) },
-  { key: 'classified', label: 'Tasniflangan', color: '#d32ce6', match: (t) => /classified/i.test(t) },
-  { key: 'covert', label: 'Maxfiy', color: '#eb4b4b', match: (t) => /covert/i.test(t) },
-  { key: 'contraband', label: 'Kontrabanda', color: '#e4ae39', match: (t) => /contraband/i.test(t) },
-  { key: 'extraordinary', label: 'Pichoq/Qo\'lqop', color: '#e4ae39', match: (t) => /extraordinary/i.test(t) },
+  { key: 'industrial', label: 'Industrial', color: '#5e98d9', match: (t) => /industrial/i.test(t) },
+  { key: 'consumer', label: 'Consumer', color: '#b0c3d9', match: (t) => /consumer/i.test(t) },
 ];
 
 function getRarityTier(weaponType = '') {
@@ -509,12 +517,17 @@ function ShopTab({ user, listings, loading, onBuy, buyingId, onCancel, cancellin
   };
   const [priceFrom, setPriceFrom] = useState('');
   const [priceTo, setPriceTo] = useState('');
+  const [wearFilter, setWearFilter] = useState([]);
   const [rarityFilter, setRarityFilter] = useState([]); // tanlangan rarity key'lar ro'yxati
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [favorites, setFavorites] = useState(() => {
     try { return JSON.parse(localStorage.getItem('starscs_favorites') || '[]'); } catch { return []; }
   });
   const [detailListing, setDetailListing] = useState(null); // "Batafsil ko'rish" modalida ochilgan item
+
+  const [priceOpen, setPriceOpen] = useState(true);
+  const [wearOpen, setWearOpen] = useState(true);
+  const [rarityOpen, setRarityOpen] = useState(true);
 
   const toggleFavorite = (id) => {
     setFavorites((prev) => {
@@ -524,8 +537,20 @@ function ShopTab({ user, listings, loading, onBuy, buyingId, onCancel, cancellin
     });
   };
 
+  const toggleWear = (code) => {
+    setWearFilter((prev) => prev.includes(code) ? prev.filter((w) => w !== code) : [...prev, code]);
+  };
+
   const toggleRarity = (key) => {
     setRarityFilter((prev) => prev.includes(key) ? prev.filter((r) => r !== key) : [...prev, key]);
+  };
+
+  const handleResetFilters = () => {
+    setPriceFrom('');
+    setPriceTo('');
+    setWearFilter([]);
+    setRarityFilter([]);
+    setFavoritesOnly(false);
   };
 
   const categoryCounts = React.useMemo(() => {
@@ -564,6 +589,12 @@ function ShopTab({ user, listings, loading, onBuy, buyingId, onCancel, cancellin
     if (priceFrom && Number.isFinite(numFrom)) result = result.filter((l) => l.price >= numFrom);
     const numTo = Number(priceTo);
     if (priceTo && Number.isFinite(numTo)) result = result.filter((l) => l.price <= numTo);
+    if (wearFilter.length > 0) {
+      result = result.filter((l) => {
+        const wear = getWearAbbrev(l.marketHashName);
+        return wear && wearFilter.includes(wear.code);
+      });
+    }
     if (rarityFilter.length > 0) {
       result = result.filter((l) => {
         const tier = getRarityTier(l.weaponType);
@@ -582,7 +613,7 @@ function ShopTab({ user, listings, loading, onBuy, buyingId, onCancel, cancellin
       default: sorted.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     }
     return sorted;
-  }, [listings, search, sortBy, category, weaponFilters, priceFrom, priceTo, rarityFilter, favoritesOnly, favorites]);
+  }, [listings, search, sortBy, category, weaponFilters, priceFrom, priceTo, wearFilter, rarityFilter, favoritesOnly, favorites]);
 
   return (
     <div>
@@ -667,40 +698,119 @@ function ShopTab({ user, listings, loading, onBuy, buyingId, onCancel, cancellin
       </div>
 
       <div className="shop-layout">
-        {/* Chap panel — narx va rarity filtri */}
+        {/* Chap panel — filtrlash paneli */}
         <aside className="shop-sidebar">
-          <div className="shop-filter-block">
-            <h4 className="shop-filter-title">Narx (UZS)</h4>
-            <div className="shop-price-range">
-              <input type="number" placeholder="Dan" value={priceFrom} onChange={(e) => setPriceFrom(e.target.value)} />
-              <span>—</span>
-              <input type="number" placeholder="Gacha" value={priceTo} onChange={(e) => setPriceTo(e.target.value)} />
-            </div>
+          <div className="shop-sidebar-header">
+            <h3 className="shop-sidebar-title">Filtrlar</h3>
           </div>
 
+          {/* Section 1: Narx (UZS) */}
           <div className="shop-filter-block">
-            <h4 className="shop-filter-title">Rarity</h4>
-            <div className="shop-rarity-list">
-              {RARITY_TIERS.map((tier) => (
-                <label key={tier.key} className="shop-rarity-item">
-                  <input
-                    type="checkbox"
-                    checked={rarityFilter.includes(tier.key)}
-                    onChange={() => toggleRarity(tier.key)}
-                  />
-                  <span className="shop-rarity-dot" style={{ background: tier.color }} />
-                  {tier.label}
-                </label>
-              ))}
+            <div className="shop-filter-header" onClick={() => setPriceOpen((prev) => !prev)}>
+              <h4 className="shop-filter-title">Narx (UZS)</h4>
+              <span className="shop-filter-toggle">
+                {priceOpen ? <Minus size={14} /> : <Plus size={14} />}
+              </span>
             </div>
+            {priceOpen && (
+              <div className="shop-price-range">
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  placeholder="Dan"
+                  value={priceFrom}
+                  onChange={(e) => setPriceFrom(e.target.value.replace(/[^0-9]/g, ''))}
+                />
+                <span className="shop-price-separator">—</span>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  placeholder="Gacha"
+                  value={priceTo}
+                  onChange={(e) => setPriceTo(e.target.value.replace(/[^0-9]/g, ''))}
+                />
+              </div>
+            )}
           </div>
 
+          {/* Section 2: Sifat */}
           <div className="shop-filter-block">
-            <label className="shop-rarity-item" style={{ fontWeight: 700 }}>
-              <input type="checkbox" checked={favoritesOnly} onChange={(e) => setFavoritesOnly(e.target.checked)} />
-              <Heart size={13} fill={favoritesOnly ? 'var(--red)' : 'none'} color="var(--red)" /> Sevimlilar
+            <div className="shop-filter-header" onClick={() => setWearOpen((prev) => !prev)}>
+              <h4 className="shop-filter-title">Sifat</h4>
+              <span className="shop-filter-toggle">
+                {wearOpen ? <Minus size={14} /> : <Plus size={14} />}
+              </span>
+            </div>
+            {wearOpen && (
+              <div className="shop-checkbox-list">
+                {WEAR_TIERS.map((wear) => (
+                  <label key={wear.code} className="shop-checkbox-item">
+                    <input
+                      type="checkbox"
+                      checked={wearFilter.includes(wear.code)}
+                      onChange={() => toggleWear(wear.code)}
+                    />
+                    <span className="custom-checkbox">
+                      {wearFilter.includes(wear.code) && <Check size={11} strokeWidth={3} />}
+                    </span>
+                    <span className="shop-checkbox-label">{wear.label}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Section 3: Noyoblik */}
+          <div className="shop-filter-block">
+            <div className="shop-filter-header" onClick={() => setRarityOpen((prev) => !prev)}>
+              <h4 className="shop-filter-title">Noyoblik</h4>
+              <span className="shop-filter-toggle">
+                {rarityOpen ? <Minus size={14} /> : <Plus size={14} />}
+              </span>
+            </div>
+            {rarityOpen && (
+              <div className="shop-checkbox-list">
+                {RARITY_TIERS.map((tier) => (
+                  <label key={tier.key} className="shop-checkbox-item">
+                    <input
+                      type="checkbox"
+                      checked={rarityFilter.includes(tier.key)}
+                      onChange={() => toggleRarity(tier.key)}
+                    />
+                    <span className="custom-checkbox">
+                      {rarityFilter.includes(tier.key) && <Check size={11} strokeWidth={3} />}
+                    </span>
+                    <span className="shop-rarity-dot" style={{ background: tier.color, color: tier.color }} />
+                    <span className="shop-checkbox-label">{tier.label}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Section 4: Sevimlilar */}
+          <div className="shop-filter-block">
+            <label className="shop-checkbox-item favorite-item">
+              <input
+                type="checkbox"
+                checked={favoritesOnly}
+                onChange={(e) => setFavoritesOnly(e.target.checked)}
+              />
+              <span className="custom-checkbox">
+                {favoritesOnly && <Check size={11} strokeWidth={3} />}
+              </span>
+              <Heart size={14} fill={favoritesOnly ? '#ef4444' : 'none'} color="#ef4444" />
+              <span className="shop-checkbox-label" style={{ fontWeight: 600 }}>Sevimlilar</span>
             </label>
           </div>
+
+          {/* Section 5: Filtrlarni tozalash (Reset Button) */}
+          <button type="button" className="shop-reset-btn" onClick={handleResetFilters}>
+            <RotateCcw size={14} />
+            Filtrlarni tozalash
+          </button>
         </aside>
 
         {/* O'ng qism — toolbar + grid */}
